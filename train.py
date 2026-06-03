@@ -18,7 +18,7 @@ from wrapper.observation_graph import ObservationGraph
 SEED = 1337
 HYPER_PARAMS = SimpleNamespace(
     N = 25,             # How many episodes before training
-    workers = 25,       # How many envs can run in parallel
+    workers = 2,       # How many envs can run in parallel
     bs = 2500,          # How many steps to learn from at a time
     episode_len = 500,
     training_episodes = 50_000, # Realistically, stops improving around 50k
@@ -118,6 +118,12 @@ def train(agents, hp, seed=SEED):
             return agents[i].learn()
 
     # Begin training loop 
+
+    import time
+
+    MAX_TRAINING_TIME = 8.5 * 60 * 60  # 8h30 en secondes
+    start_time = time.time()
+
     for e in range(hp.training_episodes // hp.N):
         # Generate N episodes in parallel 
         out = Parallel(prefer='processes', n_jobs=hp.workers)(
@@ -154,6 +160,12 @@ def train(agents, hp, seed=SEED):
 
             if e % 10_000 < hp.N and e > hp.N:
                 agent.save(outf=f'checkpoints/{hp.fnames}-{i}_{e//1000}k.pt')
+        
+        
+        elapsed = time.time() - start_time
+
+        if elapsed > MAX_TRAINING_TIME:
+            break
             
 
 
