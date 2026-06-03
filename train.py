@@ -4,7 +4,6 @@ from types import SimpleNamespace
 
 from joblib import Parallel, delayed
 import torch
-from tqdm import tqdm
 
 from CybORG import CybORG
 from CybORG.Agents import SleepAgent, EnterpriseGreenAgent, FiniteStateRedAgent
@@ -54,7 +53,7 @@ def generate_episode_job(agents, env, hp, i):
     memory_buffers = MultiPPOMemory(hp.bs)
 
     # Begin episode 
-    for ts in tqdm(range(hp.episode_len), desc=f'Worker {i}'):
+    for ts in range(hp.episode_len):
         actions = dict()
         memories = dict()
 
