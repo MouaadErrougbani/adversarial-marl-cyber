@@ -124,6 +124,13 @@ def train(agents, hp, seed=SEED):
     start_time = time.time()
 
     for e in range(hp.training_episodes // hp.N):
+        
+        start_ep = e * hp.N
+        end_ep = (e + 1) * hp.N
+
+
+
+        print("="*20, f"Episode {start_ep} -> {end_ep}", "="*20)
         # Generate N episodes in parallel 
         out = Parallel(prefer='processes', n_jobs=hp.workers)(
             delayed(generate_episode_job)(agents, envs[i % len(envs)], hp, i) for i in range(hp.N)
