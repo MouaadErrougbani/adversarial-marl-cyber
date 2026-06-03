@@ -18,10 +18,10 @@ from wrapper.observation_graph import ObservationGraph
 SEED = 1337
 HYPER_PARAMS = SimpleNamespace(
     N = 25,             # How many episodes before training
-    workers = 2,       # How many envs can run in parallel
+    workers = 25,       # How many envs can run in parallel
     bs = 2500,          # How many steps to learn from at a time
     episode_len = 500,
-    training_episodes = 25, # Realistically, stops improving around 50k
+    training_episodes = 50_000, # Realistically, stops improving around 50k
     epochs = 4
 )
 
