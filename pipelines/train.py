@@ -1,3 +1,4 @@
+# pipelines/train.py
 from argparse import ArgumentParser
 import os
 import time
@@ -175,7 +176,7 @@ def train(
         end_ep = (e + 1) * hp.N
 
         print("=" * 20, f"Episode {start_ep} -> {end_ep}", "=" * 20)
-        out = Parallel(prefer="threads", n_jobs=hp.workers)(
+        out = Parallel(prefer="processes", n_jobs=hp.workers)(
             delayed(generate_episode_job)(agents, envs[i % len(envs)], hp, agent_count, max_threads, i)
             for i in range(hp.N)
         )
@@ -240,15 +241,10 @@ def run_train(cfg):
         cfg["runtime"].get("device", "auto")
     )
 
+    # CPU pour la collecte
     device = torch.device("cpu")
 
     print("RUN 5", device)
-
-
-    seed = cfg["train"]["seed"]
-    agent_count = 5
-    max_threads = cfg["runtime"]["max_threads"]
-    device, device_reason = get_device(cfg["runtime"].get("device", "auto"))
 
     torch.manual_seed(seed)
     torch.set_num_threads(max_threads)
@@ -262,8 +258,10 @@ def run_train(cfg):
 
     resume_name = cfg["train"].get("resume_name") or cfg["run"]["name"]
     log_path = f"{log_dir}/{resume_name}.pt"
+
     log = []
     start_iter = 0
+
     if cfg["train"].get("resume") and os.path.exists(log_path):
         log = torch.load(log_path, map_location="cpu")
         start_iter = len(log)
@@ -276,11 +274,12 @@ def run_train(cfg):
 
     print(f"Training device: {train_device} ({device_reason})")
     print(f"Collection device: {device}")
+
     try:
         torch.zeros(1, device=device)
     except Exception as exc:
         print(f"Device smoke test failed, falling back to CPU: {exc}")
-        device, device_reason = get_device("cpu")
+        device = torch.device("cpu")
 
     agents = [
         InductiveGraphPPOAgent(
@@ -298,7 +297,10 @@ def run_train(cfg):
             },
             clip=cfg["model"]["clip"],
             epochs=hp.epochs,
-            device=device,
+
+            # IMPORTANT :
+            # collecte sur CPU
+            device=torch.device("cpu"),
         )
         for _ in range(agent_count)
     ]
@@ -307,6 +309,7 @@ def run_train(cfg):
         for i, agent in enumerate(agents):
             ckpt_name = cfg["train"].get("resume_name") or cfg["run"]["name"]
             ckpt_path = f"{checkpoint_dir}/{ckpt_name}-{i}_checkpoint.pt"
+
             if os.path.exists(ckpt_path):
                 agent.load_weights(ckpt_path)
                 print(f"Checkpoint loaded: agent {i} <- {ckpt_path}")
@@ -337,7 +340,6 @@ def run_train(cfg):
         log=log,
         start_iter=start_iter,
     )
-
 
 def main_legacy():
     ap = ArgumentParser()
