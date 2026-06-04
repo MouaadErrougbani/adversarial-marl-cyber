@@ -347,10 +347,20 @@ class InductiveGraphPPOAgent():
         '''
         Call opt autograd
         '''
-        self.actor.opt.step()
-        self.critic.opt.step()
-        if XLA_AVAILABLE and str(self.device).startswith("xla"):
-            xm.mark_step()
+        def _step(self):
+
+            print("ACTOR OPTIMIZER STEP")
+            self.actor.opt.step()
+
+            print("CRITIC OPTIMIZER STEP")
+            self.critic.opt.step()
+
+            print("OPTIMIZER DONE")
+
+            if XLA_AVAILABLE and str(self.device).startswith("xla"):
+                print("BEFORE XLA MARK_STEP")
+                xm.mark_step()
+                print("AFTER XLA MARK_STEP")
 
     def _to_device(self, value):
         return value.to(self.device) if torch.is_tensor(value) else value
@@ -475,13 +485,60 @@ class InductiveGraphPPOAgent():
 
                 self._zero_grad()
 
+                for i, t in enumerate(batched_states):
+
+                    if torch.is_tensor(t):
+
+                        print(
+                            f"STATE[{i}]",
+                            "DEVICE =", t.device,
+                            "DTYPE =", t.dtype,
+                            "SHAPE =", t.shape
+                        )
+
                 # Forward pass 
+
+
+                for i, t in enumerate(batched_states):
+
+                    if torch.is_tensor(t) and t.is_floating_point():
+
+                        if torch.isnan(t).any():
+                            print("NAN FOUND IN STATE", i)
+
+                        if torch.isinf(t).any():
+                            print("INF FOUND IN STATE", i)
                 dist = self.actor(*batched_states)
+                print("ACTOR FORWARD OK")
+
+                if XLA_AVAILABLE and str(self.device).startswith("xla"):
+                    xm.mark_step()
+                    print("ACTOR MARK_STEP OK")
+
                 critic_vals = self.critic(*batched_states)
 
+                print("CRITIC FORWARD OK")
+
+                if XLA_AVAILABLE and str(self.device).startswith("xla"):
+                    xm.mark_step()
+                    print("CRITIC MARK_STEP OK")
+
                 new_probs = dist.log_prob(torch.tensor(a_, device=self.device))
+                print("LOG_PROB OK")
+
+                if XLA_AVAILABLE and str(self.device).startswith("xla"):
+                    xm.mark_step()
+                    print("LOG_PROB MARK_STEP OK")
+
+
                 old_probs = torch.tensor([p[i] for i in b], device=self.device)
                 entropy = dist.entropy()
+
+                print("ENTROPY OK")
+
+                if XLA_AVAILABLE and str(self.device).startswith("xla"):
+                    xm.mark_step()
+                    print("ENTROPY MARK_STEP OK")
 
                 a_t = advantages[b]
 
@@ -504,7 +561,15 @@ class InductiveGraphPPOAgent():
 
                 # Calculate gradient and backprop
                 total_loss = actor_loss + 0.5*critic_loss - 0.01*entropy_loss
+                print("TOTAL LOSS OK")
+                if XLA_AVAILABLE and str(self.device).startswith("xla"):
+                    xm.mark_step()
+                    print("LOSS MARK_STEP OK")
                 total_loss.backward()
+                print("BACKWARD OK")
+                if XLA_AVAILABLE and str(self.device).startswith("xla"):
+                    xm.mark_step()
+                    print("BACKWARD MARK_STEP OK")
                 self._step()
 
                 # Print loss for each minibatch if verbose 
