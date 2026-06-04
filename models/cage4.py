@@ -384,6 +384,12 @@ class InductiveGraphPPOAgent():
 
     @torch.no_grad()
     def get_action(self, obs, *args):
+        if not hasattr(self, "_printed_device"):
+            print(
+                "GET_ACTION DEVICE:",
+                next(self.actor.parameters()).device
+            )
+            self._printed_device = True
         '''
         Sample an action from the actor's distribution
         given the current state. 
