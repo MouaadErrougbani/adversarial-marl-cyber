@@ -175,7 +175,7 @@ def train(
         end_ep = (e + 1) * hp.N
 
         print("=" * 20, f"Episode {start_ep} -> {end_ep}", "=" * 20)
-        out = Parallel(prefer="processes", n_jobs=hp.workers)(
+        out = Parallel(prefer="threads", n_jobs=hp.workers)(
             delayed(generate_episode_job)(agents, envs[i % len(envs)], hp, agent_count, max_threads, i)
             for i in range(hp.N)
         )
