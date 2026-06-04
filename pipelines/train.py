@@ -175,24 +175,24 @@ def train(
         end_ep = (e + 1) * hp.N
 
         print("=" * 20, f"Episode {start_ep} -> {end_ep}", "=" * 20)
-        # out = Parallel(prefer="processes", n_jobs=hp.workers)(
-        #     delayed(generate_episode_job)(agents, envs[i % len(envs)], hp, agent_count, max_threads, i)
-        #     for i in range(hp.N)
-        # )
-        # [
-        print("Before generate_episode_job")
-
-        out = [
-            generate_episode_job(
-                agents,
-                envs[i % len(envs)],
-                hp,
-                agent_count,
-                max_threads,
-                i
-            )
+        out = Parallel(prefer="processes", n_jobs=hp.workers)(
+            delayed(generate_episode_job)(agents, envs[i % len(envs)], hp, agent_count, max_threads, i)
             for i in range(hp.N)
-        ]
+        )
+        
+        # print("Before generate_episode_job")
+
+        # out = [
+        #     generate_episode_job(
+        #         agents,
+        #         envs[i % len(envs)],
+        #         hp,
+        #         agent_count,
+        #         max_threads,
+        #         i
+        #     )
+        #     for i in range(hp.N)
+        # ]
 
         memories, avg_rewards = zip(*out)
         memories = [list(m) for m in zip(*memories)]
@@ -240,7 +240,7 @@ def run_train(cfg):
         cfg["runtime"].get("device", "auto")
     )
 
-    print("RUN 5", device)
+    print("RUN 5", device)out = [
 
 
     seed = cfg["train"]["seed"]

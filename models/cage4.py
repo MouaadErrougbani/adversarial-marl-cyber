@@ -420,6 +420,10 @@ class InductiveGraphPPOAgent():
         self.memory.remember(idx, s,a,v,p,r,t)
 
     def learn(self, verbose=False):
+        print("================================")
+        print("Actor device:", next(self.actor.parameters()).device)
+        print("Critic device:", next(self.critic.parameters()).device)
+        print("================================")
         '''        
         This runs the PPO update algorithm on memories stored in self.memory 
         Assumes that an external process is adding memories to the buffer
