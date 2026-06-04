@@ -75,6 +75,7 @@ def build_hyper_params(cfg):
 
 @torch.no_grad()
 def generate_episode_job(agents, env, hp, agent_count, max_threads, i):
+    print(f"Worker {i} started")
     torch.set_num_threads(max_threads // hp.workers)
 
     env.reset()
@@ -158,10 +159,24 @@ def train(
         end_ep = (e + 1) * hp.N
 
         print("=" * 20, f"Episode {start_ep} -> {end_ep}", "=" * 20)
-        out = Parallel(prefer="processes", n_jobs=hp.workers)(
-            delayed(generate_episode_job)(agents, envs[i % len(envs)], hp, agent_count, max_threads, i)
+        # out = Parallel(prefer="processes", n_jobs=hp.workers)(
+        #     delayed(generate_episode_job)(agents, envs[i % len(envs)], hp, agent_count, max_threads, i)
+        #     for i in range(hp.N)
+        # )
+        # [
+        print("Before generate_episode_job")
+
+        out = [
+            generate_episode_job(
+                agents,
+                envs[i % len(envs)],
+                hp,
+                agent_count,
+                max_threads,
+                i
+            )
             for i in range(hp.N)
-        )
+        ]
 
         memories, avg_rewards = zip(*out)
         memories = [list(m) for m in zip(*memories)]
