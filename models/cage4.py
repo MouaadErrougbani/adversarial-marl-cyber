@@ -343,31 +343,14 @@ class InductiveGraphPPOAgent():
         self.actor.opt.zero_grad()
         self.critic.opt.zero_grad()
 
-    # def _step(self):
-    #     '''
-    #     Call opt autograd
-    #     '''
-    #     self.actor.opt.step()
-    #     self.critic.opt.step()
-    #     if XLA_AVAILABLE and str(self.device).startswith("xla"):
-    #         xm.mark_step()
-
     def _step(self):
         '''
         Call opt autograd
         '''
-        print("ACTOR OPTIMIZER STEP")
         self.actor.opt.step()
-
-        print("CRITIC OPTIMIZER STEP")
         self.critic.opt.step()
-
-        print("OPTIMIZER DONE")
-
         if XLA_AVAILABLE and str(self.device).startswith("xla"):
-            print("BEFORE XLA MARK_STEP")
             xm.mark_step()
-            print("AFTER XLA MARK_STEP")
 
     def _to_device(self, value):
         return value.to(self.device) if torch.is_tensor(value) else value
@@ -410,10 +393,6 @@ class InductiveGraphPPOAgent():
     @torch.no_grad()
     def get_action(self, obs, *args):
         if not hasattr(self, "_printed_device"):
-            print(
-                "GET_ACTION DEVICE:",
-                next(self.actor.parameters()).device
-            )
             self._printed_device = True
         '''
         Sample an action from the actor's distribution
@@ -451,11 +430,6 @@ class InductiveGraphPPOAgent():
         self.memory.remember(idx, s,a,v,p,r,t)
 
     def learn(self, verbose=False):
-        print("================================")
-        print("LEARN DEVICE =", self.device)
-        print("Actor device:", next(self.actor.parameters()).device)
-        print("Critic device:", next(self.critic.parameters()).device)
-        print("================================")
         '''        
         This runs the PPO update algorithm on memories stored in self.memory 
         Assumes that an external process is adding memories to the buffer

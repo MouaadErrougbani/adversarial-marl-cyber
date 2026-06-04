@@ -15,31 +15,14 @@ warnings.filterwarnings(
 from joblib import Parallel, delayed
 import torch
 
-print("IMPORT 1")
 from CybORG import CybORG
-
-print("IMPORT 2")
 from CybORG.Agents import SleepAgent, EnterpriseGreenAgent, FiniteStateRedAgent
-
-print("IMPORT 3")
 from CybORG.Simulator.Scenarios import EnterpriseScenarioGenerator
-
-print("IMPORT 4")
 from models.cage4 import InductiveGraphPPOAgent
-
-print("IMPORT 5")
 from utils.device import get_device
-
-print("IMPORT 6")
 from models.memory_buffer import MultiPPOMemory
-
-print("IMPORT 7")
 from wrapper.graph_wrapper import GraphWrapper
-
-print("IMPORT 8")
 from wrapper.observation_graph import ObservationGraph
-
-print("IMPORT DONE")
 
 
 def default_config():
@@ -92,7 +75,6 @@ def build_hyper_params(cfg):
 
 @torch.no_grad()
 def generate_episode_job(agents, env, hp, agent_count, max_threads, i):
-    print(f"Worker {i} started | PID={os.getpid()}")
     torch.set_num_threads(max_threads // hp.workers)
 
     env.reset()
@@ -142,7 +124,6 @@ def collect_data(
     agent_count,
     max_threads,
 ):
-    print("Collecting data...")
 
     out = Parallel(prefer="processes", n_jobs=hp.workers)(
             delayed(generate_episode_job)(agents, envs[i % len(envs)], hp, agent_count, max_threads, i)
@@ -157,22 +138,13 @@ def train_models(
     train_device,
 ):
     print("Updating")
-    print("TRAIN DEVICE =", train_device)
 
-    print(
-        "BEFORE:",
-        next(agents[0].actor.parameters()).device
-    )
     # move models to TPU/GPU
     for agent in agents:
         agent.actor.to(train_device)
         agent.critic.to(train_device)
         agent.device = train_device
 
-    print(
-        "MOVED:",
-        next(agents[0].actor.parameters()).device
-    )
 
     def learn(i):
         return agents[i].learn()
@@ -199,10 +171,7 @@ def train_models(
         agent.critic.to("cpu")
         agent.device = torch.device("cpu")
 
-    print(
-        "AFTER:",
-        next(agents[0].actor.parameters()).device
-    )
+
 
     return last_losses
 
@@ -283,16 +252,12 @@ def train(
 
 
 def run_train(cfg):
-    print("RUN 1")
 
     seed = cfg["train"]["seed"]
-    print("RUN 2")
 
     agent_count = 5
-    print("RUN 3")
 
     max_threads = cfg["runtime"]["max_threads"]
-    print("RUN 4")
 
     train_device, device_reason = get_device(
         cfg["runtime"].get("device", "auto")
@@ -301,7 +266,6 @@ def run_train(cfg):
     # CPU pour la collecte
     device = torch.device("cpu")
 
-    print("RUN 5", device)
 
     torch.manual_seed(seed)
     torch.set_num_threads(max_threads)

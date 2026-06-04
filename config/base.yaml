@@ -7,11 +7,11 @@ runtime:
   device: auto # auto, cpu, cuda, xla
 train:
   seed: 1337
-  episode_len: 100
-  episodes_per_update: 5
-  workers: 5
-  batch_size: 25
-  training_episodes: 75
+  episode_len: 500
+  episodes_per_update: 25
+  workers: 25
+  batch_size: 2500
+  training_episodes: 50000
   epochs: 4
   resume: false
   resume_name: null
