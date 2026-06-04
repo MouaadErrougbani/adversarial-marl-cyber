@@ -14,15 +14,31 @@ warnings.filterwarnings(
 from joblib import Parallel, delayed
 import torch
 
+print("IMPORT 1")
 from CybORG import CybORG
+
+print("IMPORT 2")
 from CybORG.Agents import SleepAgent, EnterpriseGreenAgent, FiniteStateRedAgent
+
+print("IMPORT 3")
 from CybORG.Simulator.Scenarios import EnterpriseScenarioGenerator
 
+print("IMPORT 4")
 from models.cage4 import InductiveGraphPPOAgent
+
+print("IMPORT 5")
 from utils.device import get_device
+
+print("IMPORT 6")
 from models.memory_buffer import MultiPPOMemory
+
+print("IMPORT 7")
 from wrapper.graph_wrapper import GraphWrapper
+
+print("IMPORT 8")
 from wrapper.observation_graph import ObservationGraph
+
+print("IMPORT DONE")
 
 
 def default_config():
