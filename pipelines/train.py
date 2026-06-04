@@ -225,6 +225,24 @@ def train(
 
 
 def run_train(cfg):
+    print("RUN 1")
+
+    seed = cfg["train"]["seed"]
+    print("RUN 2")
+
+    agent_count = 5
+    print("RUN 3")
+
+    max_threads = cfg["runtime"]["max_threads"]
+    print("RUN 4")
+
+    device, device_reason = get_device(
+        cfg["runtime"].get("device", "auto")
+    )
+
+    print("RUN 5", device)
+
+
     seed = cfg["train"]["seed"]
     agent_count = 5
     max_threads = cfg["runtime"]["max_threads"]
