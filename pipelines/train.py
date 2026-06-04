@@ -236,9 +236,11 @@ def run_train(cfg):
     max_threads = cfg["runtime"]["max_threads"]
     print("RUN 4")
 
-    device, device_reason = get_device(
+    train_device, device_reason = get_device(
         cfg["runtime"].get("device", "auto")
     )
+
+    device = torch.device("cpu")
 
     print("RUN 5", device)
 
@@ -272,7 +274,8 @@ def run_train(cfg):
         start_iter = int(override_start)
         print(f"Resume override start_iter={start_iter}")
 
-    print(f"Using device: {device} ({device_reason})")
+    print(f"Training device: {train_device} ({device_reason})")
+    print(f"Collection device: {device}")
     try:
         torch.zeros(1, device=device)
     except Exception as exc:
