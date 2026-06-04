@@ -240,7 +240,7 @@ def run_train(cfg):
         cfg["runtime"].get("device", "auto")
     )
 
-    print("RUN 5", device)out = [
+    print("RUN 5", device)
 
 
     seed = cfg["train"]["seed"]
