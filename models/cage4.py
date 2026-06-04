@@ -377,6 +377,11 @@ class InductiveGraphPPOAgent():
             'agent': me
         }, outf)
 
+    def load_weights(self, path):
+        data = torch.load(path, map_location=self.device)
+        self.actor.load_state_dict(data['actor'])
+        self.critic.load_state_dict(data['critic'])
+
     @torch.no_grad()
     def get_action(self, obs, *args):
         '''

@@ -44,6 +44,9 @@ def default_config():
             "batch_size": 2500,
             "training_episodes": 50_000,
             "epochs": 4,
+            "resume": False,
+            "resume_name": None,
+            "resume_start_iter": None,
         },
         "model": {
             "hidden": 256,
@@ -114,11 +117,20 @@ def generate_episode_job(agents, env, hp, agent_count, max_threads, i):
     return memory_buffers.mems, tot_reward
 
 
-def train(agents, hp, seed, agent_count, max_threads, max_training_hours, log_dir, checkpoint_dir):
+def train(
+    agents,
+    hp,
+    seed,
+    agent_count,
+    max_threads,
+    max_training_hours,
+    log_dir,
+    checkpoint_dir,
+    log,
+    start_iter,
+):
     for agent in agents:
         agent.train()
-    log = []
-
     envs = []
     for _ in range(min(hp.workers, hp.N)):
         sg = EnterpriseScenarioGenerator(
@@ -140,7 +152,8 @@ def train(agents, hp, seed, agent_count, max_threads, max_training_hours, log_di
     max_training_time = max_training_hours * 60 * 60
     start_time = time.time()
 
-    for e in range(hp.training_episodes // hp.N):
+    total_updates = hp.training_episodes // hp.N
+    for e in range(start_iter, total_updates):
         start_ep = e * hp.N
         end_ep = (e + 1) * hp.N
 
@@ -196,6 +209,20 @@ def run_train(cfg):
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(checkpoint_dir, exist_ok=True)
 
+    resume_name = cfg["train"].get("resume_name") or cfg["run"]["name"]
+    log_path = f"{log_dir}/{resume_name}.pt"
+    log = []
+    start_iter = 0
+    if cfg["train"].get("resume") and os.path.exists(log_path):
+        log = torch.load(log_path, map_location="cpu")
+        start_iter = len(log)
+        print(f"Resume enabled: loaded log {log_path} (start_iter={start_iter})")
+
+    override_start = cfg["train"].get("resume_start_iter")
+    if override_start is not None:
+        start_iter = int(override_start)
+        print(f"Resume override start_iter={start_iter}")
+
     print(f"Using device: {device} ({device_reason})")
     try:
         torch.zeros(1, device=device)
@@ -224,6 +251,16 @@ def run_train(cfg):
         for _ in range(agent_count)
     ]
 
+    if cfg["train"].get("resume"):
+        for i, agent in enumerate(agents):
+            ckpt_name = cfg["train"].get("resume_name") or cfg["run"]["name"]
+            ckpt_path = f"{checkpoint_dir}/{ckpt_name}-{i}_checkpoint.pt"
+            if os.path.exists(ckpt_path):
+                agent.load_weights(ckpt_path)
+                print(f"Checkpoint loaded: agent {i} <- {ckpt_path}")
+            else:
+                print(f"Warning: checkpoint not found for agent {i}: {ckpt_path}")
+
     print("==" * 40)
     print("Hyperparameters:")
     print("Seed:", seed)
@@ -245,6 +282,8 @@ def run_train(cfg):
         max_training_hours=cfg["runtime"]["max_training_hours"],
         log_dir=log_dir,
         checkpoint_dir=checkpoint_dir,
+        log=log,
+        start_iter=start_iter,
     )
 
 

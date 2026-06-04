@@ -13,6 +13,9 @@ train:
   batch_size: 2500
   training_episodes: 50000
   epochs: 4
+  resume: false
+  resume_name: null
+  resume_start_iter: null
 model:
   hidden: 256
   embedding: 128
