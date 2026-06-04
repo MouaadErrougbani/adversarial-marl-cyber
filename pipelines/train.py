@@ -135,6 +135,65 @@ def generate_episode_job(agents, env, hp, agent_count, max_threads, i):
     return memory_buffers.mems, tot_reward
 
 
+def collect_data(
+    agents,
+    envs,
+    hp,
+    agent_count,
+    max_threads,
+):
+    print("Collecting data...")
+
+    out = Parallel(prefer="processes", n_jobs=hp.workers)(
+            delayed(generate_episode_job)(agents, envs[i % len(envs)], hp, agent_count, max_threads, i)
+            for i in range(hp.N)
+        )
+
+    return out
+
+def train_models(
+    agents,
+    agent_count,
+    train_device,
+):
+    print("Updating")
+    print("TRAIN DEVICE =", train_device)
+
+    print(
+        "BEFORE:",
+        next(agents[0].actor.parameters()).device
+    )
+    # move models to TPU/GPU
+    for agent in agents:
+        agent.actor.to(train_device)
+        agent.critic.to(train_device)
+        agent.device = train_device
+
+    print(
+        "MOVED:",
+        next(agents[0].actor.parameters()).device
+    )
+
+    def learn(i):
+        return agents[i].learn()
+    
+    
+
+    last_losses = Parallel(
+        prefer="threads",
+        n_jobs=agent_count
+    )(
+        delayed(learn)(i)
+        for i in range(agent_count)
+    )
+
+    print(
+        "AFTER:",
+        next(agents[0].actor.parameters()).device
+    )
+
+    return last_losses
+
 def train(
     agents,
     hp,
@@ -146,6 +205,7 @@ def train(
     checkpoint_dir,
     log,
     start_iter,
+    train_device,
 ):
     for agent in agents:
         agent.train()
@@ -160,12 +220,6 @@ def train(
         env = CybORG(sg, "sim", seed=seed)
         envs.append(GraphWrapper(env))
 
-    def learn(i):
-        if i < 4:
-            torch.set_num_threads(max_threads // 9)
-        else:
-            torch.set_num_threads((max_threads // 9) * agent_count)
-        return agents[i].learn()
 
     max_training_time = max_training_hours * 60 * 60
     start_time = time.time()
@@ -176,33 +230,24 @@ def train(
         end_ep = (e + 1) * hp.N
 
         print("=" * 20, f"Episode {start_ep} -> {end_ep}", "=" * 20)
-        out = Parallel(prefer="processes", n_jobs=hp.workers)(
-            delayed(generate_episode_job)(agents, envs[i % len(envs)], hp, agent_count, max_threads, i)
-            for i in range(hp.N)
-        )
         
-        # print("Before generate_episode_job")
-
-        # out = [
-        #     generate_episode_job(
-        #         agents,
-        #         envs[i % len(envs)],
-        #         hp,
-        #         agent_count,
-        #         max_threads,
-        #         i
-        #     )
-        #     for i in range(hp.N)
-        # ]
+        out = collect_data(
+            agents,
+            envs,
+            hp,
+            agent_count,
+            max_threads,
+        )
 
         memories, avg_rewards = zip(*out)
         memories = [list(m) for m in zip(*memories)]
         for i in range(agent_count):
             agents[i].memory.mems = memories[i]
 
-        print("Updating")
-        last_losses = Parallel(prefer="threads", n_jobs=agent_count)(
-            delayed(learn)(i) for i in range(agent_count)
+        last_losses = train_models(
+            agents,
+            agent_count,
+            train_device,
         )
 
         losses = ",".join([f"{last_losses[i]:0.4f}" for i in range(agent_count)])
@@ -339,6 +384,7 @@ def run_train(cfg):
         checkpoint_dir=checkpoint_dir,
         log=log,
         start_iter=start_iter,
+        train_device=train_device,
     )
 
 def main_legacy():
@@ -370,3 +416,22 @@ def main_legacy():
 
 if __name__ == "__main__":
     main_legacy()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
