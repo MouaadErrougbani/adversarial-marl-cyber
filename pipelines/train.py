@@ -91,7 +91,7 @@ def build_hyper_params(cfg):
 
 @torch.no_grad()
 def generate_episode_job(agents, env, hp, agent_count, max_threads, i):
-    print(f"Worker {i} started")
+    print(f"Worker {i} started | PID={os.getpid()}")
     torch.set_num_threads(max_threads // hp.workers)
 
     env.reset()
