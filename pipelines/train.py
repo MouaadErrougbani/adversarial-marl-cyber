@@ -179,20 +179,20 @@ def train_models(
     
     
 
-    # last_losses = Parallel(
-    #     prefer="threads",
-    #     n_jobs=agent_count
-    # )(
-    #     delayed(learn)(i)
-    #     for i in range(agent_count)
-    # )
+    last_losses = Parallel(
+        prefer="threads",
+        n_jobs=agent_count
+    )(
+        delayed(learn)(i)
+        for i in range(agent_count)
+    )
 
-    last_losses = []
+    # last_losses = []
 
-    for i in range(agent_count):
-        last_losses.append(
-            agents[i].learn()
-        )
+    # for i in range(agent_count):
+    #     last_losses.append(
+    #         agents[i].learn()
+    #     )
 
     for agent in agents:
         agent.actor.to("cpu")
