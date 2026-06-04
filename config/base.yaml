@@ -1,0 +1,29 @@
+paths:
+  logs: logs
+  checkpoints: checkpoints
+runtime:
+  max_threads: 36
+  max_training_hours: 11.1
+  device: auto
+train:
+  seed: 1337
+  episode_len: 500
+  episodes_per_update: 25
+  workers: 25
+  batch_size: 2500
+  training_episodes: 50000
+  epochs: 4
+model:
+  hidden: 256
+  embedding: 128
+  actor_lr: 0.0003
+  critic_lr: 0.001
+  clip: 0.2
+run:
+  name: model
+eval:
+  max_eps: 100
+  distribute: 1
+  seed: null
+  append_timestamp: false
+  output_path: tmp

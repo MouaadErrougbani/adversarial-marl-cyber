@@ -1,0 +1,6 @@
+eval:
+  max_eps: 100
+  distribute: 1
+  seed: null
+  append_timestamp: false
+  output_path: tmp

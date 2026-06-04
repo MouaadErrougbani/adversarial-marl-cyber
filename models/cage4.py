@@ -13,8 +13,8 @@ MAX_EDGES = 8
 
 
 def pad_sequence(seq, lens, padding):
-    padded = torch.zeros(lens.size(0), padding, seq.size(-1))
-    mask = torch.ones(padded.size(0), padded.size(1))
+    padded = torch.zeros(lens.size(0), padding, seq.size(-1), device=seq.device)
+    mask = torch.ones(padded.size(0), padded.size(1), device=seq.device)
 
     offset = 0
     for i,len in enumerate(lens):
@@ -67,7 +67,7 @@ class SimpleSelfAttention(nn.Module):
             g:      B x d tensor
         '''
         if g is None:
-            g = torch.zeros((v.size(0), self.g_dim))
+            g = torch.zeros((v.size(0), self.g_dim), device=v.device)
 
         att = self.att(v)                   # B x N x h
         feat = self.feat(v)                 # B x N x h
@@ -134,7 +134,7 @@ class InductiveActorNetwork(nn.Module):
         if multi_subnet:
             rtrs = rtrs.repeat_interleave(3,0)
 
-        rtr_mask = torch.ones(rtrs.size(0), 9, 1)
+        rtr_mask = torch.ones(rtrs.size(0), 9, 1, device=x.device)
 
         # Global init features
         g0 = self.global_net(global_vec)
@@ -283,10 +283,11 @@ class InductiveGraphPPOAgent():
     which action to take
     '''
     def __init__(self, in_dim, gamma=0.99, lmbda=0.95, clip=0.1, bs=5, epochs=6,
-                 a_kwargs=dict(), c_kwargs=dict(), training=True, concat_edges=False):
+                 a_kwargs=dict(), c_kwargs=dict(), training=True, concat_edges=False, device=None):
 
-        self.actor = InductiveActorNetwork(in_dim, concat_edges=concat_edges, **a_kwargs)
-        self.critic = InductiveCriticNetwork(in_dim, **c_kwargs)
+        self.device = device or torch.device("cpu")
+        self.actor = InductiveActorNetwork(in_dim, concat_edges=concat_edges, **a_kwargs).to(self.device)
+        self.critic = InductiveCriticNetwork(in_dim, **c_kwargs).to(self.device)
         self.memory = MultiPPOMemory(bs, agents=5)
 
         self.args = (in_dim,)
@@ -343,6 +344,23 @@ class InductiveGraphPPOAgent():
         self.actor.opt.step()
         self.critic.opt.step()
 
+    def _to_device(self, value):
+        return value.to(self.device) if torch.is_tensor(value) else value
+
+    def _move_state(self, state):
+        x, ei, global_vec, servers, n_servers, users, n_users, action_edges, multi_subnet = state
+        return (
+            self._to_device(x),
+            self._to_device(ei),
+            self._to_device(global_vec),
+            self._to_device(servers),
+            self._to_device(n_servers),
+            self._to_device(users),
+            self._to_device(n_users),
+            self._to_device(action_edges),
+            self._to_device(multi_subnet),
+        )
+
 
     def set_deterministic(self, val):
         self.deterministic = val
@@ -372,6 +390,7 @@ class InductiveGraphPPOAgent():
         if is_blocked:
             return None
 
+        state = self._move_state(state)
         distro = self.actor(*state)
 
         # I don't know why this would ever be called
@@ -413,11 +432,11 @@ class InductiveGraphPPOAgent():
                 rewards.insert(0, discounted_reward)
 
             # Normalize 
-            r = torch.tensor(rewards, dtype=torch.float)
+            r = torch.tensor(rewards, dtype=torch.float, device=self.device)
             r = (r - r.mean()) / (r.std() + 1e-5) # Normalize rewards
 
             # Calculate advantage 
-            advantages = r - torch.tensor(v)
+            advantages = r - torch.tensor(v, device=self.device)
             closs,aloss,eloss = 0,0,0
 
             # Optimize for clipped advantage for each minibatch 
@@ -428,7 +447,7 @@ class InductiveGraphPPOAgent():
                 # Combine graphs from minibatches so GNN is called once
                 s_ = [s[idx] for idx in b]
                 a_ = [a[idx] for idx in b]
-                batched_states = combine_marl_states(s_)
+                batched_states = self._move_state(combine_marl_states(s_))
 
                 self._zero_grad()
 
@@ -436,8 +455,8 @@ class InductiveGraphPPOAgent():
                 dist = self.actor(*batched_states)
                 critic_vals = self.critic(*batched_states)
 
-                new_probs = dist.log_prob(torch.tensor(a_))
-                old_probs = torch.tensor([p[i] for i in b])
+                new_probs = dist.log_prob(torch.tensor(a_, device=self.device))
+                old_probs = torch.tensor([p[i] for i in b], device=self.device)
                 entropy = dist.entropy()
 
                 a_t = advantages[b]
@@ -484,14 +503,15 @@ class InductiveGraphPPOAgent():
         return total_loss.item()
 
 
-def load(in_f):
+def load(in_f, device=None):
     '''
     Loads model checkpoint file 
     '''
-    data = torch.load(in_f)
+    map_location = device or "cpu"
+    data = torch.load(in_f, map_location=map_location)
     args,kwargs = data['agent']
 
-    agent = InductiveGraphPPOAgent(*args, **kwargs)
+    agent = InductiveGraphPPOAgent(*args, **kwargs, device=device)
     agent.actor.load_state_dict(data['actor'])
     agent.critic.load_state_dict(data['critic'])
 
