@@ -7,6 +7,12 @@ from torch_geometric.nn import GCNConv
 from models.memory_buffer import MultiPPOMemory
 from models.utils import combine_marl_states
 
+try:
+    import torch_xla.core.xla_model as xm
+    XLA_AVAILABLE = True
+except Exception:
+    XLA_AVAILABLE = False
+
 MAX_SERVERS = 6
 MAX_USERS = 10
 MAX_EDGES = 8
@@ -343,6 +349,8 @@ class InductiveGraphPPOAgent():
         '''
         self.actor.opt.step()
         self.critic.opt.step()
+        if XLA_AVAILABLE and str(self.device).startswith("xla"):
+            xm.mark_step()
 
     def _to_device(self, value):
         return value.to(self.device) if torch.is_tensor(value) else value
@@ -427,6 +435,7 @@ class InductiveGraphPPOAgent():
 
     def learn(self, verbose=False):
         print("================================")
+        print("LEARN DEVICE =", self.device)
         print("Actor device:", next(self.actor.parameters()).device)
         print("Critic device:", next(self.critic.parameters()).device)
         print("================================")
