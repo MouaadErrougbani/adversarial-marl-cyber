@@ -186,6 +186,10 @@ def train_models(
         delayed(learn)(i)
         for i in range(agent_count)
     )
+    for agent in agents:
+        agent.actor.to("cpu")
+        agent.critic.to("cpu")
+        agent.device = torch.device("cpu")
 
     print(
         "AFTER:",
