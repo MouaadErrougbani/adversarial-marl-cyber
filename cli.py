@@ -1,10 +1,19 @@
+# cli.py
 import argparse
 
+print("CLI 1")
+
 from utils.config import load_config, merge_dicts
+
+print("CLI 2")
+
 from pipelines.train import run_train, default_config
+
+print("CLI 3")
+
 from pipelines.eval import run_eval
 
-
+print("CLI 4")
 def build_parser():
     parser = argparse.ArgumentParser("Project CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
