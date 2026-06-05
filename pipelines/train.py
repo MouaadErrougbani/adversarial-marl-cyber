@@ -19,7 +19,6 @@ from CybORG import CybORG
 from CybORG.Agents import SleepAgent, EnterpriseGreenAgent, FiniteStateRedAgent
 from CybORG.Simulator.Scenarios import EnterpriseScenarioGenerator
 from models.cage4 import InductiveGraphPPOAgent
-from utils.device import get_device
 from models.memory_buffer import MultiPPOMemory
 from wrapper.graph_wrapper import GraphWrapper
 from wrapper.observation_graph import ObservationGraph
@@ -132,21 +131,12 @@ def collect_data(
 
     return out
 
-pp = "threads"
+
 def train_models(
     agents,
     agent_count,
-    train_device,
 ):
-    global pp
     print("Updating", flush=True)
-
-    # move models to TPU/GPU
-    for agent in agents:
-        agent.actor.to(train_device)
-        agent.critic.to(train_device)
-        agent.device = train_device
-
 
     def learn(i):
         return agents[i].learn()
@@ -156,14 +146,14 @@ def train_models(
 
 
     last_losses = Parallel(
-        prefer=pp,
+        prefer="threads",
         n_jobs=agent_count
     )(
         delayed(learn)(i)
         for i in range(agent_count)
     )
-    print(f"Update time: {time.time() - start_time:0.2f} seconds, avec prefer: {pp}", flush=True)
-    pp = "processes" if pp == "threads" else "threads"
+    print(f"Update time: {time.time() - start_time:0.2f} seconds", flush=True)
+
     return last_losses
 
 def train(
@@ -177,7 +167,6 @@ def train(
     checkpoint_dir,
     log,
     start_iter,
-    train_device,
 ):
     for agent in agents:
         agent.train()
@@ -219,7 +208,6 @@ def train(
         last_losses = train_models(
             agents,
             agent_count,
-            train_device,
         )
 
         losses = ",".join([f"{last_losses[i]:0.4f}" for i in range(agent_count)])
@@ -250,13 +238,6 @@ def run_train(cfg):
 
     max_threads = cfg["runtime"]["max_threads"]
 
-    train_device, device_reason = get_device(
-        cfg["runtime"].get("device", "auto")
-    )
-
-    # CPU pour la collecte
-    device = torch.device("cpu")
-
 
     torch.manual_seed(seed)
     torch.set_num_threads(max_threads)
@@ -284,14 +265,6 @@ def run_train(cfg):
         start_iter = int(override_start)
         print(f"Resume override start_iter={start_iter}", flush=True)
 
-    print(f"Training device: {train_device} ({device_reason})", flush=True)
-    print(f"Collection device: {device}", flush=True)
-
-    try:
-        torch.zeros(1, device=device)
-    except Exception as exc:
-        print(f"Device smoke test failed, falling back to CPU: {exc}", flush=True)
-        device = torch.device("cpu")
 
     agents = [
         InductiveGraphPPOAgent(
@@ -347,8 +320,7 @@ def run_train(cfg):
         log_dir=log_dir,
         checkpoint_dir=checkpoint_dir,
         log=log,
-        start_iter=start_iter,
-        train_device=train_device,
+        start_iter=start_iter
     )
 
 def main_legacy():
