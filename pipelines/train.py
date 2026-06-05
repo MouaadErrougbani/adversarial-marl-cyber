@@ -302,11 +302,8 @@ def run_train(cfg):
                 "hidden2": cfg["model"]["embedding"],
             },
             clip=cfg["model"]["clip"],
-            epochs=hp.epochs,
-
-            # IMPORTANT :
-            # collecte sur CPU
-            device=torch.device("cpu"),
+            epochs=hp.epochs
+            
         )
         for _ in range(agent_count)
     ]
