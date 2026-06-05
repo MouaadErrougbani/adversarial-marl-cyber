@@ -4,7 +4,6 @@ import os
 import time
 from types import SimpleNamespace
 import warnings
-from tqdm import tqdm
 
 os.environ.setdefault("PYTHONWARNINGS", "ignore")
 warnings.filterwarnings(
@@ -83,7 +82,7 @@ def generate_episode_job(agents, env, hp, agent_count, max_threads, i):
     tot_reward = 0
     memory_buffers = MultiPPOMemory(hp.bs, agents=agent_count)
 
-    for ts in tqdm(range(hp.episode_len), desc="Generating episode"):
+    for ts in range(hp.episode_len):
         actions = dict()
         memories = dict()
 
