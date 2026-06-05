@@ -159,115 +159,64 @@ def train_models(
 import os
 import time
 
+import os
+import sys
+import subprocess
 
-def test_tpu_xla(size=2048, steps=20, force_pjrt=True):
+
+def run_tpu_test_safe(size=2048, steps=20, timeout=120):
     """
-    Teste TPU/XLA seulement si disponible.
-    Si TPU/XLA n'est pas disponible, retourne directement un dict avec ok=False.
+    يشغل TPU test في subprocess مستقل.
+    إذا وقع SIGSEGV، التدريب الرئيسي ما يموتش.
     """
 
-    if force_pjrt:
-        # Important: avant import torch_xla
-        os.environ.setdefault("PJRT_DEVICE", "TPU")
+    env = os.environ.copy()
+    env["PJRT_DEVICE"] = "TPU"
 
     try:
-        import torch
-    except Exception as e:
-        return {
-            "ok": False,
-            "reason": "torch unavailable",
-            "error": str(e),
-        }
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-W",
+                "ignore",
+                "-m",
+                "utils.tpu_test_runner",
+                "--size",
+                str(size),
+                "--steps",
+                str(steps),
+            ],
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+            check=False,
+        )
 
-    try:
-        import torch_xla.core.xla_model as xm
-    except Exception as e:
-        print("⚠️ torch_xla non disponible. TPU test ignoré.", flush=True)
-        return {
-            "ok": False,
-            "reason": "torch_xla unavailable",
-            "error": str(e),
-        }
+        if result.stdout:
+            print("===== TPU TEST STDOUT =====", flush=True)
+            print(result.stdout, flush=True)
 
-    try:
-        print("🔍 Checking TPU/XLA...", flush=True)
+        if result.stderr:
+            print("===== TPU TEST STDERR =====", flush=True)
+            print(result.stderr, flush=True)
 
-        device = xm.xla_device()
-        device_str = str(device)
+        if result.returncode == 0:
+            print("✅ TPU test OK", flush=True)
+            return True
 
-        if not device_str.startswith("xla"):
-            print("⚠️ XLA device non détecté. TPU test ignoré.", flush=True)
-            return {
-                "ok": False,
-                "reason": "xla device not detected",
-                "device": device_str,
-            }
+        print(f"⚠️ TPU test failed. returncode={result.returncode}", flush=True)
+        return False
 
-        print("🔍 Testing TPU/XLA...", flush=True)
-        print("Device:", device, flush=True)
-
-        # Petit tensor test
-        x = torch.ones((4, 4), device=device)
-        y = x @ x
-        xm.mark_step()
-
-        print("Small tensor device:", y.device, flush=True)
-        print("Small result:", flush=True)
-        print(y.cpu(), flush=True)
-
-        print("\n🚀 Running matrix multiplication benchmark on TPU...", flush=True)
-
-        a = torch.randn((size, size), device=device)
-        b = torch.randn((size, size), device=device)
-
-        # Warmup: première exécution compile souvent
-        t0 = time.time()
-        c = a @ b
-        xm.mark_step()
-        warmup_time = time.time() - t0
-
-        print(f"Warmup time: {warmup_time:.2f}s", flush=True)
-
-        # Benchmark
-        t0 = time.time()
-
-        for _ in range(steps):
-            c = a @ b
-            xm.mark_step()
-
-        total_time = time.time() - t0
-        avg_time = total_time / steps
-
-        print(f"Benchmark steps: {steps}", flush=True)
-        print(f"Matrix size: {size}x{size}", flush=True)
-        print(f"Total time: {total_time:.2f}s", flush=True)
-        print(f"Average time per step: {avg_time:.4f}s", flush=True)
-
-        # Ramener une petite valeur vers CPU pour confirmer résultat réel
-        result = c[0, 0].detach().cpu().item()
-        print("Result sample:", result, flush=True)
-
-        print("✅ TPU test finished successfully", flush=True)
-
-        return {
-            "ok": True,
-            "device": device_str,
-            "size": size,
-            "steps": steps,
-            "warmup_time": warmup_time,
-            "total_time": total_time,
-            "avg_time_per_step": avg_time,
-            "result_sample": result,
-        }
+    except subprocess.TimeoutExpired:
+        print("⚠️ TPU test timeout. Ignored.", flush=True)
+        return False
 
     except Exception as e:
-        print("❌ TPU/XLA test failed. Test ignoré.", flush=True)
-        return {
-            "ok": False,
-            "reason": "tpu test failed",
-            "error": str(e),
-        }
-    
+        print(f"⚠️ TPU test error: {e}", flush=True)
+        return False
+
+
 def train(
     agents,
     hp,
@@ -340,8 +289,9 @@ def train(
 
         elapsed = time.time() - start_time
         
-        # if str(device).startswith("xla"):
-        test_tpu_xla(size=2048, steps=20, force_pjrt=True)
+        if e == start_iter:
+            run_tpu_test_safe(size=2048, steps=20, timeout=120)
+        
         if elapsed > max_training_time:
             break
 
