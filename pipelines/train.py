@@ -289,8 +289,8 @@ def train(
 
         elapsed = time.time() - start_time
         
-        if e == start_iter:
-            run_tpu_test_safe(size=2048, steps=20, timeout=120)
+        # if e == start_iter:
+        run_tpu_test_safe(size=2048, steps=20, timeout=120)
         
         if elapsed > max_training_time:
             break
