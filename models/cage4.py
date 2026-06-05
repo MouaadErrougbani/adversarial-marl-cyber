@@ -344,13 +344,17 @@ class InductiveGraphPPOAgent():
         self.critic.opt.zero_grad()
 
     def _step(self):
-        '''
-        Call opt autograd
-        '''
-        self.actor.opt.step()
-        self.critic.opt.step()
-        if XLA_AVAILABLE and str(self.device).startswith("xla"):
-            xm.mark_step()
+        """
+        Optimizer step compatible avec CPU / CUDA / TPU-XLA.
+        """
+        use_xla = XLA_AVAILABLE and str(self.device).startswith("xla")
+
+        if use_xla:
+            xm.optimizer_step(self.actor.opt, barrier=False)
+            xm.optimizer_step(self.critic.opt, barrier=True)
+        else:
+            self.actor.opt.step()
+            self.critic.opt.step()
 
     def _to_device(self, value):
         return value.to(self.device) if torch.is_tensor(value) else value

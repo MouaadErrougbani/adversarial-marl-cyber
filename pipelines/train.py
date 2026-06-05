@@ -132,48 +132,100 @@ def collect_data(
 
     return out
 
+
 def train_models(
     agents,
     agent_count,
     train_device,
 ):
-    print("Updating")
+    print("Updating-v2")
 
-    # move models to TPU/GPU
+    train_device_str = str(train_device)
+    use_xla = train_device_str.startswith("xla")
+
+    if use_xla:
+        try:
+            import torch_xla.core.xla_model as xm
+        except Exception:
+            xm = None
+            use_xla = False
+    else:
+        xm = None
+
+    # نقل النماذج إلى جهاز التدريب: TPU/GPU/CPU
     for agent in agents:
         agent.actor.to(train_device)
         agent.critic.to(train_device)
         agent.device = train_device
 
-
-    def learn(i):
-        return agents[i].learn()
-    
-    
-
-    # last_losses = Parallel(
-    #     prefer="threads",
-    #     n_jobs=agent_count
-    # )(
-    #     delayed(learn)(i)
-    #     for i in range(agent_count)
-    # )
+    if use_xla and xm is not None:
+        xm.mark_step()
 
     last_losses = []
 
+    # تدريب كل agent
     for i in range(agent_count):
-        last_losses.append(
-            agents[i].learn()
-        )
+        loss = agents[i].learn()
+        last_losses.append(loss)
 
+        # مهم مع TPU/XLA:
+        # يجبر XLA على تنفيذ العمليات المتراكمة بعد كل agent
+        if use_xla and xm is not None:
+            xm.mark_step()
+
+    # بعد التدريب نرجع إلى CPU لأن collect_data يستعمل CPU
     for agent in agents:
         agent.actor.to("cpu")
         agent.critic.to("cpu")
         agent.device = torch.device("cpu")
 
-
+    if use_xla and xm is not None:
+        xm.mark_step()
 
     return last_losses
+
+# def train_models(
+#     agents,
+#     agent_count,
+#     train_device,
+# ):
+#     print("Updating")
+
+#     # move models to TPU/GPU
+#     for agent in agents:
+#         agent.actor.to(train_device)
+#         agent.critic.to(train_device)
+#         agent.device = train_device
+
+
+#     def learn(i):
+#         return agents[i].learn()
+    
+    
+
+#     # last_losses = Parallel(
+#     #     prefer="threads",
+#     #     n_jobs=agent_count
+#     # )(
+#     #     delayed(learn)(i)
+#     #     for i in range(agent_count)
+#     # )
+
+#     last_losses = []
+
+#     for i in range(agent_count):
+#         last_losses.append(
+#             agents[i].learn()
+#         )
+
+#     for agent in agents:
+#         agent.actor.to("cpu")
+#         agent.critic.to("cpu")
+#         agent.device = torch.device("cpu")
+
+
+
+#     return last_losses
 
 def train(
     agents,
