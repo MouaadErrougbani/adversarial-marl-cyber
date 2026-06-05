@@ -326,12 +326,12 @@ def train(
         # if e == start_iter:
         check_tpu_test_async()
         start_tpu_test_async(
-            batch=128,
+            batch=64,
             seq_len=512,
             hidden=1024,
-            layers=16,
+            layers=12,
             heads=16,
-            steps=200,
+            steps=100,
         )
         
         if elapsed > max_training_time:
