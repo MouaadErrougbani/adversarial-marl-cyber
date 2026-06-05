@@ -136,7 +136,6 @@ def train_models(
     agents,
     agent_count,
 ):
-    print("Updating", flush=True)
 
     def learn(i):
         return agents[i].learn()
@@ -152,7 +151,6 @@ def train_models(
         delayed(learn)(i)
         for i in range(agent_count)
     )
-    print(f"Update time: {time.time() - start_time:0.2f} seconds", flush=True)
 
     return last_losses
 
@@ -177,7 +175,6 @@ def start_tpu_test_async(
     global _TPU_TEST_PROCESS
 
     if _TPU_TEST_PROCESS is not None and _TPU_TEST_PROCESS.poll() is None:
-        print("ℹ️ TPU test still running. Skipped this update.", flush=True)
         return False
 
     env = os.environ.copy()
@@ -209,7 +206,6 @@ def start_tpu_test_async(
         text=True,
     )
 
-    print("🚀 TPU Transformer load started in background.", flush=True)
     return True
 
 def check_tpu_test_async():
@@ -232,23 +228,13 @@ def check_tpu_test_async():
 
     _TPU_TEST_PROCESS = None
 
-    if stdout:
-        print("===== TPU TEST STDOUT =====", flush=True)
-        print(stdout, flush=True)
-
-    if stderr:
-        print("===== TPU TEST STDERR =====", flush=True)
-        print(stderr[-2000:], flush=True)
-
+  
     if returncode == 0:
-        print("✅ TPU async test OK", flush=True)
         return True
 
     if stderr and "Device or resource busy" in stderr:
-        print("⚠️ TPU busy. Test ignored.", flush=True)
         return False
 
-    print(f"⚠️ TPU async test failed. returncode={returncode}", flush=True)
     return False
 
 def train(

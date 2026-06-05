@@ -22,21 +22,12 @@ def main():
     import torch.nn as nn
     import torch_xla.core.xla_model as xm
 
-    print("🔥 TPU Transformer load starting...", flush=True)
 
     device = xm.xla_device()
     device_str = str(device)
 
     if not device_str.startswith("xla"):
-        print(f"⚠️ XLA device non détecté: {device_str}", flush=True)
         return 1
-
-    print("Device:", device, flush=True)
-    print(
-        f"batch={args.batch}, seq_len={args.seq_len}, hidden={args.hidden}, "
-        f"layers={args.layers}, heads={args.heads}, steps={args.steps}",
-        flush=True,
-    )
 
     encoder_layer = nn.TransformerEncoderLayer(
         d_model=args.hidden,
@@ -103,14 +94,9 @@ def main():
 
         if step % 10 == 0:
             loss_value = loss.detach().cpu().item()
-            print(f"step={step}/{args.steps}, loss={loss_value:.6f}", flush=True)
 
     final_loss = loss.detach().cpu().item()
     total_time = time.time() - t0
-
-    print(f"Total TPU model load time: {total_time:.2f}s", flush=True)
-    print(f"Final loss: {final_loss:.6f}", flush=True)
-    print("✅ TPU Transformer load finished", flush=True)
 
     return 0
 

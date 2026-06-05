@@ -485,7 +485,7 @@ class InductiveGraphPPOAgent():
             closs /= len(batches)
             aloss /= len(batches)
             eloss /= len(batches)
-            print(f'[{e}] C-Loss: {0.5*closs:0.4f}  A-Loss: {aloss:0.4f} E-loss: {-eloss*0.01:0.4f}', flush=True)
+            # print(f'[{e}] C-Loss: {0.5*closs:0.4f}  A-Loss: {aloss:0.4f} E-loss: {-eloss*0.01:0.4f}', flush=True)
 
         # After we have sampled our minibatches e times, clear the memory buffer
         self.memory.clear()
