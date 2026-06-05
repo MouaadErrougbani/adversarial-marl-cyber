@@ -270,9 +270,9 @@ def train(
     start_time = time.time()
 
     total_updates = hp.training_episodes // hp.N
-    device, reason = get_device("auto")
-    print("Device:", device)
-    print("Reason:", reason)
+    # device, reason = get_device("auto")
+    # print("Device:", device)
+    # print("Reason:", reason)
     for e in range(start_iter, total_updates):
         start_ep = e * hp.N
         end_ep = (e + 1) * hp.N
@@ -314,8 +314,8 @@ def train(
 
         elapsed = time.time() - start_time
         
-        if str(device).startswith("xla"):
-            test_tpu_xla(size=2048, steps=20, force_pjrt=False)
+        # if str(device).startswith("xla"):
+        #     test_tpu_xla(size=2048, steps=20, force_pjrt=False)
         if elapsed > max_training_time:
             break
 
