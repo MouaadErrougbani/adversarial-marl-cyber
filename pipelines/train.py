@@ -158,87 +158,118 @@ def train_models(
 
     return last_losses
 
+import os
+import time
+
 
 def test_tpu_xla(size=2048, steps=20, force_pjrt=True):
     """
-    Teste si TPU/XLA fonctionne avec PyTorch/XLA.
-
-    Args:
-        size: taille de la matrice, ex: 2048 => 2048x2048
-        steps: nombre d'itérations du benchmark
-        force_pjrt: si True, met PJRT_DEVICE=TPU avant import torch_xla
-
-    Returns:
-        dict avec les informations du test
+    Teste TPU/XLA seulement si disponible.
+    Si TPU/XLA n'est pas disponible, retourne directement un dict avec ok=False.
     """
 
     if force_pjrt:
-        # Important: doit être fait avant import torch_xla
-        os.environ["PJRT_DEVICE"] = "TPU"
+        # Important: avant import torch_xla
+        os.environ.setdefault("PJRT_DEVICE", "TPU")
 
-    import torch
-    import torch_xla.core.xla_model as xm
+    try:
+        import torch
+    except Exception as e:
+        return {
+            "ok": False,
+            "reason": "torch unavailable",
+            "error": str(e),
+        }
 
-    print("🔍 Testing TPU/XLA...", flush=True)
+    try:
+        import torch_xla.core.xla_model as xm
+    except Exception as e:
+        print("⚠️ torch_xla non disponible. TPU test ignoré.", flush=True)
+        return {
+            "ok": False,
+            "reason": "torch_xla unavailable",
+            "error": str(e),
+        }
 
-    device = xm.xla_device()
-    print("Device:", device, flush=True)
+    try:
+        print("🔍 Checking TPU/XLA...", flush=True)
 
-    # Petit tensor test
-    x = torch.ones((4, 4), device=device)
-    y = x @ x
+        device = xm.xla_device()
+        device_str = str(device)
 
-    xm.mark_step()
+        if not device_str.startswith("xla"):
+            print("⚠️ XLA device non détecté. TPU test ignoré.", flush=True)
+            return {
+                "ok": False,
+                "reason": "xla device not detected",
+                "device": device_str,
+            }
 
-    print("Small tensor device:", y.device, flush=True)
-    print("Small result:", flush=True)
-    print(y.cpu(), flush=True)
+        print("🔍 Testing TPU/XLA...", flush=True)
+        print("Device:", device, flush=True)
 
-    print("\n🚀 Running matrix multiplication benchmark on TPU...", flush=True)
-
-    a = torch.randn((size, size), device=device)
-    b = torch.randn((size, size), device=device)
-
-    # Warmup: première exécution compile souvent
-    t0 = time.time()
-    c = a @ b
-    xm.mark_step()
-    warmup_time = time.time() - t0
-
-    print(f"Warmup time: {warmup_time:.2f}s", flush=True)
-
-    # Benchmark
-    t0 = time.time()
-
-    for _ in range(steps):
-        c = a @ b
+        # Petit tensor test
+        x = torch.ones((4, 4), device=device)
+        y = x @ x
         xm.mark_step()
 
-    total_time = time.time() - t0
-    avg_time = total_time / steps
+        print("Small tensor device:", y.device, flush=True)
+        print("Small result:", flush=True)
+        print(y.cpu(), flush=True)
 
-    print(f"Benchmark steps: {steps}", flush=True)
-    print(f"Matrix size: {size}x{size}", flush=True)
-    print(f"Total time: {total_time:.2f}s", flush=True)
-    print(f"Average time per step: {avg_time:.4f}s", flush=True)
+        print("\n🚀 Running matrix multiplication benchmark on TPU...", flush=True)
 
-    # Ramener une petite valeur vers CPU pour confirmer résultat réel
-    result = c[0, 0].detach().cpu().item()
-    print("Result sample:", result, flush=True)
+        a = torch.randn((size, size), device=device)
+        b = torch.randn((size, size), device=device)
 
-    print("✅ TPU test finished successfully", flush=True)
+        # Warmup: première exécution compile souvent
+        t0 = time.time()
+        c = a @ b
+        xm.mark_step()
+        warmup_time = time.time() - t0
 
-    return {
-        "device": str(device),
-        "size": size,
-        "steps": steps,
-        "warmup_time": warmup_time,
-        "total_time": total_time,
-        "avg_time_per_step": avg_time,
-        "result_sample": result,
-    }
+        print(f"Warmup time: {warmup_time:.2f}s", flush=True)
 
+        # Benchmark
+        t0 = time.time()
 
+        for _ in range(steps):
+            c = a @ b
+            xm.mark_step()
+
+        total_time = time.time() - t0
+        avg_time = total_time / steps
+
+        print(f"Benchmark steps: {steps}", flush=True)
+        print(f"Matrix size: {size}x{size}", flush=True)
+        print(f"Total time: {total_time:.2f}s", flush=True)
+        print(f"Average time per step: {avg_time:.4f}s", flush=True)
+
+        # Ramener une petite valeur vers CPU pour confirmer résultat réel
+        result = c[0, 0].detach().cpu().item()
+        print("Result sample:", result, flush=True)
+
+        print("✅ TPU test finished successfully", flush=True)
+
+        return {
+            "ok": True,
+            "device": device_str,
+            "size": size,
+            "steps": steps,
+            "warmup_time": warmup_time,
+            "total_time": total_time,
+            "avg_time_per_step": avg_time,
+            "result_sample": result,
+        }
+
+    except Exception as e:
+        print("❌ TPU/XLA test failed. Test ignoré.", flush=True)
+        return {
+            "ok": False,
+            "reason": "tpu test failed",
+            "error": str(e),
+        }
+    
 def train(
     agents,
     hp,
@@ -269,9 +300,7 @@ def train(
     start_time = time.time()
 
     total_updates = hp.training_episodes // hp.N
-    device, reason = get_device("xla")
-    print("Device:", device)
-    print("Reason:", reason)
+    
     for e in range(start_iter, total_updates):
         start_ep = e * hp.N
         end_ep = (e + 1) * hp.N
@@ -314,7 +343,7 @@ def train(
         elapsed = time.time() - start_time
         
         # if str(device).startswith("xla"):
-        #     test_tpu_xla(size=2048, steps=20, force_pjrt=False)
+        test_tpu_xla(size=2048, steps=20, force_pjrt=False)
         if elapsed > max_training_time:
             break
 
