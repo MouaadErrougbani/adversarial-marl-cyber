@@ -164,58 +164,85 @@ import sys
 import subprocess
 
 
-def run_tpu_test_safe(size=2048, steps=20, timeout=120):
+_TPU_TEST_PROCESS = None
+
+
+def start_tpu_test_async(size=2048, steps=20):
     """
-    يشغل TPU test في subprocess مستقل.
-    إذا وقع SIGSEGV، التدريب الرئيسي ما يموتش.
+    Lance TPU test en arrière-plan.
+    Le training ne va pas attendre.
     """
+
+    global _TPU_TEST_PROCESS
+
+    # إذا test سابق مازال خدام، ما نشغلوش واحد جديد
+    if _TPU_TEST_PROCESS is not None and _TPU_TEST_PROCESS.poll() is None:
+        print("ℹ️ TPU test still running. Skipped this update.", flush=True)
+        return False
 
     env = os.environ.copy()
     env["PJRT_DEVICE"] = "TPU"
 
-    try:
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-W",
-                "ignore",
-                "-m",
-                "utils.tpu_test_runner",
-                "--size",
-                str(size),
-                "--steps",
-                str(steps),
-            ],
-            env=env,
-            text=True,
-            capture_output=True,
-            timeout=timeout,
-            check=False,
-        )
+    _TPU_TEST_PROCESS = subprocess.Popen(
+        [
+            sys.executable,
+            "-W",
+            "ignore",
+            "-m",
+            "utils.tpu_test_runner",
+            "--size",
+            str(size),
+            "--steps",
+            str(steps),
+        ],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
 
-        if result.stdout:
-            print("===== TPU TEST STDOUT =====", flush=True)
-            print(result.stdout, flush=True)
+    print("🚀 TPU test started in background.", flush=True)
+    return True
 
-        if result.stderr:
-            print("===== TPU TEST STDERR =====", flush=True)
-            print(result.stderr, flush=True)
 
-        if result.returncode == 0:
-            print("✅ TPU test OK", flush=True)
-            return True
+def check_tpu_test_async():
+    """
+    Vérifie si le TPU test est terminé.
+    Ne bloque pas le training.
+    """
 
-        print(f"⚠️ TPU test failed. returncode={result.returncode}", flush=True)
+    global _TPU_TEST_PROCESS
+
+    if _TPU_TEST_PROCESS is None:
+        return None
+
+    # مازال خدام
+    if _TPU_TEST_PROCESS.poll() is None:
+        return None
+
+    stdout, stderr = _TPU_TEST_PROCESS.communicate()
+    returncode = _TPU_TEST_PROCESS.returncode
+
+    _TPU_TEST_PROCESS = None
+
+    if stdout:
+        print("===== TPU TEST STDOUT =====", flush=True)
+        print(stdout, flush=True)
+
+    if stderr:
+        print("===== TPU TEST STDERR =====", flush=True)
+        print(stderr[-2000:], flush=True)
+
+    if returncode == 0:
+        print("✅ TPU async test OK", flush=True)
+        return True
+
+    if stderr and "Device or resource busy" in stderr:
+        print("⚠️ TPU busy. Test ignored.", flush=True)
         return False
 
-    except subprocess.TimeoutExpired:
-        print("⚠️ TPU test timeout. Ignored.", flush=True)
-        return False
-
-    except Exception as e:
-        print(f"⚠️ TPU test error: {e}", flush=True)
-        return False
-
+    print(f"⚠️ TPU async test failed. returncode={returncode}", flush=True)
+    return False
 
 def train(
     agents,
@@ -290,7 +317,8 @@ def train(
         elapsed = time.time() - start_time
         
         # if e == start_iter:
-        run_tpu_test_safe(size=2048, steps=20, timeout=120)
+        check_tpu_test_async()
+        start_tpu_test_async(size=2048, steps=20)
         
         if elapsed > max_training_time:
             break
