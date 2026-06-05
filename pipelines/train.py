@@ -137,167 +137,28 @@ def train_models(
     agent_count,
     train_device,
 ):
-    import time
-    import gc
-    import torch
+    print("Updating")
 
-    print("Updating-v3", flush=True)
-
-    use_xla = str(train_device).startswith("xla")
-
-    if use_xla:
-        try:
-            import torch_xla.core.xla_model as xm
-        except Exception:
-            print("XLA import failed, falling back to CPU")
-            xm = None
-            use_xla = False
-    else:
-        xm = None
-
-    last_losses = []
-
-    for i in range(agent_count):
-        print(f"[UPDATE] start agent {i}", flush=True)
-        t0 = time.time()
-
-        agent = agents[i]
-
-        # نقل agent واحد فقط إلى TPU/GPU
+    # move models to TPU/GPU
+    for agent in agents:
         agent.actor.to(train_device)
         agent.critic.to(train_device)
         agent.device = train_device
-        print("Agent moved to training device", flush=True)
 
-        if use_xla and xm is not None:
-            xm.mark_step()
 
-        # تدريب هذا agent فقط
-        print("Starting learn()", flush=True)
-        loss = agent.learn(verbose=False)
-        print(f"Finished learn() with loss={loss:.4f}", flush=True)
-        last_losses.append(loss)
+    def learn(i):
+        return agents[i].learn()
+    
+    
 
-        if use_xla and xm is not None:
-            xm.mark_step()
-
-        # إرجاعه إلى CPU بعد التدريب
-        agent.actor.to("cpu")
-        agent.critic.to("cpu")
-        agent.device = torch.device("cpu")
-
-        if use_xla and xm is not None:
-            xm.mark_step()
-
-        # تنظيف الذاكرة
-        gc.collect()
-
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-
-        print(
-            f"[UPDATE] end agent {i} "
-            f"loss={loss:.4f} "
-            f"time={time.time() - t0:.2f}s",
-            flush=True
-        )
-
+    last_losses = Parallel(
+        prefer="threads",
+        n_jobs=agent_count
+    )(
+        delayed(learn)(i)
+        for i in range(agent_count)
+    )
     return last_losses
-
-
-# def train_models(
-#     agents,
-#     agent_count,
-#     train_device,
-# ):
-#     print("Updating-v2")
-
-#     train_device_str = str(train_device)
-#     use_xla = train_device_str.startswith("xla")
-
-#     if use_xla:
-#         try:
-#             import torch_xla.core.xla_model as xm
-#         except Exception:
-#             xm = None
-#             use_xla = False
-#     else:
-#         xm = None
-
-#     # نقل النماذج إلى جهاز التدريب: TPU/GPU/CPU
-#     for agent in agents:
-#         agent.actor.to(train_device)
-#         agent.critic.to(train_device)
-#         agent.device = train_device
-
-#     if use_xla and xm is not None:
-#         xm.mark_step()
-
-#     last_losses = []
-
-#     # تدريب كل agent
-#     for i in range(agent_count):
-#         loss = agents[i].learn()
-#         last_losses.append(loss)
-
-#         # مهم مع TPU/XLA:
-#         # يجبر XLA على تنفيذ العمليات المتراكمة بعد كل agent
-#         if use_xla and xm is not None:
-#             xm.mark_step()
-
-#     # بعد التدريب نرجع إلى CPU لأن collect_data يستعمل CPU
-#     for agent in agents:
-#         agent.actor.to("cpu")
-#         agent.critic.to("cpu")
-#         agent.device = torch.device("cpu")
-
-#     if use_xla and xm is not None:
-#         xm.mark_step()
-
-#     return last_losses
-
-# def train_models(
-#     agents,
-#     agent_count,
-#     train_device,
-# ):
-#     print("Updating")
-
-#     # move models to TPU/GPU
-#     for agent in agents:
-#         agent.actor.to(train_device)
-#         agent.critic.to(train_device)
-#         agent.device = train_device
-
-
-#     def learn(i):
-#         return agents[i].learn()
-    
-    
-
-#     # last_losses = Parallel(
-#     #     prefer="threads",
-#     #     n_jobs=agent_count
-#     # )(
-#     #     delayed(learn)(i)
-#     #     for i in range(agent_count)
-#     # )
-
-#     last_losses = []
-
-#     for i in range(agent_count):
-#         last_losses.append(
-#             agents[i].learn()
-#         )
-
-#     for agent in agents:
-#         agent.actor.to("cpu")
-#         agent.critic.to("cpu")
-#         agent.device = torch.device("cpu")
-
-
-
-#     return last_losses
 
 def train(
     agents,
