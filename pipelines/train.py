@@ -23,8 +23,6 @@ from models.memory_buffer import MultiPPOMemory
 from wrapper.graph_wrapper import GraphWrapper
 from wrapper.observation_graph import ObservationGraph
 
-from utils.device import get_device
-
 
 
 def default_config():
@@ -343,7 +341,7 @@ def train(
         elapsed = time.time() - start_time
         
         # if str(device).startswith("xla"):
-        test_tpu_xla(size=2048, steps=20, force_pjrt=False)
+        test_tpu_xla(size=2048, steps=20, force_pjrt=True)
         if elapsed > max_training_time:
             break
 
