@@ -84,7 +84,7 @@ def generate_episode_job(agents, env, hp, agent_count, max_threads, i):
     tot_reward = 0
     memory_buffers = MultiPPOMemory(hp.bs, agents=agent_count)
 
-    for ts in range(hp.episode_len):
+    for ts in tqdm(range(hp.episode_len), desc="Generating episode"):
         actions = dict()
         memories = dict()
 
