@@ -395,6 +395,14 @@ class InductiveGraphPPOAgent():
         '''
         self.memory.remember(idx, s,a,v,p,r,t)
 
+
+
+    def load_weights(self, path):
+        data = torch.load(path)
+        self.actor.load_state_dict(data['actor'])
+        self.critic.load_state_dict(data['critic'])
+
+
     def learn(self, verbose=False):
         '''        
         This runs the PPO update algorithm on memories stored in self.memory 
@@ -482,6 +490,7 @@ class InductiveGraphPPOAgent():
         # After we have sampled our minibatches e times, clear the memory buffer
         self.memory.clear()
         return total_loss.item()
+
 
 
 def load(in_f):
