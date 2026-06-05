@@ -4,7 +4,6 @@ paths:
 runtime:
   max_threads: 36
   max_training_hours: 11.1
-  device: auto # auto, cpu, cuda, xla
 train:
   seed: 1337
   episode_len: 500

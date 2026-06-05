@@ -36,7 +36,6 @@ def default_config():
         "runtime": {
             "max_threads": 36,
             "max_training_hours": 11.1,
-            "device": "auto",
         },
         "train": {
             "seed": 1337,
@@ -271,8 +270,8 @@ def train(
 
     total_updates = hp.training_episodes // hp.N
     device, reason = get_device("xla")
-    # print("Device:", device)
-    # print("Reason:", reason)
+    print("Device:", device)
+    print("Reason:", reason)
     for e in range(start_iter, total_updates):
         start_ep = e * hp.N
         end_ep = (e + 1) * hp.N
