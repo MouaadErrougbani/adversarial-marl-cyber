@@ -467,7 +467,7 @@ class InductiveGraphPPOAgent():
                 # Print loss for each minibatch if verbose 
                 # (aggregate loss is printed regardless)
                 if verbose:
-                    print(f'[{e}] C-Loss: {0.5*critic_loss.item():0.4f}  A-Loss: {actor_loss.item():0.4f} E-loss: {-entropy_loss.item()*0.01:0.4f}')
+                    print(f'[{e}] C-Loss: {0.5*critic_loss.item():0.4f}  A-Loss: {actor_loss.item():0.4f} E-loss: {-entropy_loss.item()*0.01:0.4f}', flush=True)
 
                 closs += critic_loss.item()
                 aloss += actor_loss.item()
@@ -477,7 +477,7 @@ class InductiveGraphPPOAgent():
             closs /= len(batches)
             aloss /= len(batches)
             eloss /= len(batches)
-            print(f'[{e}] C-Loss: {0.5*closs:0.4f}  A-Loss: {aloss:0.4f} E-loss: {-eloss*0.01:0.4f}')
+            print(f'[{e}] C-Loss: {0.5*closs:0.4f}  A-Loss: {aloss:0.4f} E-loss: {-eloss*0.01:0.4f}', flush=True)
 
         # After we have sampled our minibatches e times, clear the memory buffer
         self.memory.clear()

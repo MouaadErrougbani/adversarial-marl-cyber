@@ -132,12 +132,14 @@ def collect_data(
 
     return out
 
+pp = "threads"
 def train_models(
     agents,
     agent_count,
     train_device,
 ):
-    print("Updating")
+    global pp
+    print("Updating", flush=True)
 
     # move models to TPU/GPU
     for agent in agents:
@@ -149,15 +151,19 @@ def train_models(
     def learn(i):
         return agents[i].learn()
     
-    
+    import time
+    start_time = time.time()
+
 
     last_losses = Parallel(
-        prefer="threads",
+        prefer=pp,
         n_jobs=agent_count
     )(
         delayed(learn)(i)
         for i in range(agent_count)
     )
+    print(f"Update time: {time.time() - start_time:0.2f} seconds, avec prefer: {pp}", flush=True)
+    pp = "processes" if pp == "threads" else "threads"
     return last_losses
 
 def train(
@@ -195,7 +201,7 @@ def train(
         start_ep = e * hp.N
         end_ep = (e + 1) * hp.N
 
-        print("=" * 20, f"Episode {start_ep} -> {end_ep}", "=" * 20)
+        print("=" * 20, f"Episode {start_ep} -> {end_ep}", "=" * 20, flush=True)
         
         out = collect_data(
             agents,
@@ -217,10 +223,10 @@ def train(
         )
 
         losses = ",".join([f"{last_losses[i]:0.4f}" for i in range(agent_count)])
-        print(f"[{e}] Loss: [{losses}]")
+        print(f"[{e}] Loss: [{losses}]", flush=True)
 
         avg_reward = sum(avg_rewards) / hp.N
-        print(f"Avg reward for episode: {avg_reward}")
+        print(f"Avg reward for episode: {avg_reward}", flush=True)
         log.append((avg_reward, e, sum(last_losses) / agent_count))
         torch.save(log, f"{log_dir}/{hp.fnames}.pt")
 
@@ -271,20 +277,20 @@ def run_train(cfg):
     if cfg["train"].get("resume") and os.path.exists(log_path):
         log = torch.load(log_path, map_location="cpu")
         start_iter = len(log)
-        print(f"Resume enabled: loaded log {log_path} (start_iter={start_iter})")
+        print(f"Resume enabled: loaded log {log_path} (start_iter={start_iter})", flush=True)
 
     override_start = cfg["train"].get("resume_start_iter")
     if override_start is not None:
         start_iter = int(override_start)
-        print(f"Resume override start_iter={start_iter}")
+        print(f"Resume override start_iter={start_iter}", flush=True)
 
-    print(f"Training device: {train_device} ({device_reason})")
-    print(f"Collection device: {device}")
+    print(f"Training device: {train_device} ({device_reason})", flush=True)
+    print(f"Collection device: {device}", flush=True)
 
     try:
         torch.zeros(1, device=device)
     except Exception as exc:
-        print(f"Device smoke test failed, falling back to CPU: {exc}")
+        print(f"Device smoke test failed, falling back to CPU: {exc}", flush=True)
         device = torch.device("cpu")
 
     agents = [
@@ -315,7 +321,7 @@ def run_train(cfg):
 
             if os.path.exists(ckpt_path):
                 agent.load_weights(ckpt_path)
-                print(f"Checkpoint loaded: agent {i} <- {ckpt_path}")
+                print(f"Checkpoint loaded: agent {i} <- {ckpt_path}", flush=True)
             else:
                 print(f"Warning: checkpoint not found for agent {i}: {ckpt_path}")
 
