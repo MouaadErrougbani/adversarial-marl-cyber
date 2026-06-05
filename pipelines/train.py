@@ -166,16 +166,16 @@ import subprocess
 
 _TPU_TEST_PROCESS = None
 
-
-def start_tpu_test_async(size=2048, steps=20):
-    """
-    Lance TPU test en arrière-plan.
-    Le training ne va pas attendre.
-    """
-
+def start_tpu_test_async(
+    batch=64,
+    seq_len=512,
+    hidden=1024,
+    layers=12,
+    heads=16,
+    steps=100,
+):
     global _TPU_TEST_PROCESS
 
-    # إذا test سابق مازال خدام، ما نشغلوش واحد جديد
     if _TPU_TEST_PROCESS is not None and _TPU_TEST_PROCESS.poll() is None:
         print("ℹ️ TPU test still running. Skipped this update.", flush=True)
         return False
@@ -190,8 +190,16 @@ def start_tpu_test_async(size=2048, steps=20):
             "ignore",
             "-m",
             "utils.tpu_test_runner",
-            "--size",
-            str(size),
+            "--batch",
+            str(batch),
+            "--seq-len",
+            str(seq_len),
+            "--hidden",
+            str(hidden),
+            "--layers",
+            str(layers),
+            "--heads",
+            str(heads),
             "--steps",
             str(steps),
         ],
@@ -201,9 +209,8 @@ def start_tpu_test_async(size=2048, steps=20):
         text=True,
     )
 
-    print("🚀 TPU test started in background.", flush=True)
+    print("🚀 TPU Transformer load started in background.", flush=True)
     return True
-
 
 def check_tpu_test_async():
     """
@@ -318,7 +325,14 @@ def train(
         
         # if e == start_iter:
         check_tpu_test_async()
-        start_tpu_test_async(size=2048, steps=20)
+        start_tpu_test_async(
+            batch=128,
+            seq_len=512,
+            hidden=1024,
+            layers=16,
+            heads=16,
+            steps=200,
+        )
         
         if elapsed > max_training_time:
             break

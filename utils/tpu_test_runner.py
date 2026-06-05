@@ -7,17 +7,22 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--size", type=int, default=2048)
-    parser.add_argument("--steps", type=int, default=20)
+    parser.add_argument("--batch", type=int, default=64)
+    parser.add_argument("--seq-len", type=int, default=512)
+    parser.add_argument("--hidden", type=int, default=1024)
+    parser.add_argument("--layers", type=int, default=12)
+    parser.add_argument("--heads", type=int, default=16)
+    parser.add_argument("--steps", type=int, default=100)
     args = parser.parse_args()
 
-    # مهم: قبل import torch_xla
+    # Important avant import torch_xla
     os.environ.setdefault("PJRT_DEVICE", "TPU")
 
     import torch
+    import torch.nn as nn
     import torch_xla.core.xla_model as xm
 
-    print("🔍 Checking TPU/XLA...", flush=True)
+    print("🔥 TPU Transformer load starting...", flush=True)
 
     device = xm.xla_device()
     device_str = str(device)
@@ -26,50 +31,87 @@ def main():
         print(f"⚠️ XLA device non détecté: {device_str}", flush=True)
         return 1
 
-    print("🔍 Testing TPU/XLA...", flush=True)
     print("Device:", device, flush=True)
+    print(
+        f"batch={args.batch}, seq_len={args.seq_len}, hidden={args.hidden}, "
+        f"layers={args.layers}, heads={args.heads}, steps={args.steps}",
+        flush=True,
+    )
 
-    x = torch.ones((4, 4), device=device)
-    y = x @ x
+    encoder_layer = nn.TransformerEncoderLayer(
+        d_model=args.hidden,
+        nhead=args.heads,
+        dim_feedforward=args.hidden * 4,
+        dropout=0.0,
+        batch_first=True,
+        activation="gelu",
+    )
+
+    model = nn.TransformerEncoder(
+        encoder_layer,
+        num_layers=args.layers,
+    ).to(device)
+
+    head = nn.Linear(args.hidden, args.hidden).to(device)
+
+    optimizer = torch.optim.AdamW(
+        list(model.parameters()) + list(head.parameters()),
+        lr=1e-4,
+    )
+
+    model.train()
+    head.train()
+
+    x = torch.randn(
+        args.batch,
+        args.seq_len,
+        args.hidden,
+        device=device,
+    )
+
+    target = torch.randn(
+        args.batch,
+        args.seq_len,
+        args.hidden,
+        device=device,
+    )
+
+    loss_fn = nn.MSELoss()
+
+    # Warmup
+    optimizer.zero_grad(set_to_none=True)
+    y = head(model(x))
+    loss = loss_fn(y, target)
+    loss.backward()
+    optimizer.step()
     xm.mark_step()
 
-    print("Small tensor device:", y.device, flush=True)
-    print(y.cpu(), flush=True)
-
-    size = args.size
-    steps = args.steps
-
-    a = torch.randn((size, size), device=device)
-    b = torch.randn((size, size), device=device)
-
-    t0 = time.time()
-    c = a @ b
-    xm.mark_step()
-
-    # مهم: نجبر الحساب يكمل فعلاً
-    _ = c[0, 0].detach().cpu().item()
-
-    warmup_time = time.time() - t0
+    _ = loss.detach().cpu().item()
 
     t0 = time.time()
 
-    for _ in range(steps):
-        c = a @ b
+    for step in range(args.steps):
+        optimizer.zero_grad(set_to_none=True)
+
+        y = head(model(x))
+        loss = loss_fn(y, target)
+
+        loss.backward()
+        optimizer.step()
+
         xm.mark_step()
 
-    result = c[0, 0].detach().cpu().item()
+        if step % 10 == 0:
+            loss_value = loss.detach().cpu().item()
+            print(f"step={step}/{args.steps}, loss={loss_value:.6f}", flush=True)
 
+    final_loss = loss.detach().cpu().item()
     total_time = time.time() - t0
-    avg_time = total_time / steps
 
-    print(f"Warmup time: {warmup_time:.2f}s", flush=True)
-    print(f"Benchmark steps: {steps}", flush=True)
-    print(f"Matrix size: {size}x{size}", flush=True)
-    print(f"Total time: {total_time:.2f}s", flush=True)
-    print(f"Average time per step: {avg_time:.4f}s", flush=True)
-    print("Result sample:", result, flush=True)
+    print(f"Total TPU model load time: {total_time:.2f}s", flush=True)
+    print(f"Final loss: {final_loss:.6f}", flush=True)
+    print("✅ TPU Transformer load finished", flush=True)
 
-    print("✅ TPU test finished successfully", flush=True)
     return 0
 
 
