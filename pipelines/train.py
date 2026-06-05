@@ -270,7 +270,7 @@ def train(
     start_time = time.time()
 
     total_updates = hp.training_episodes // hp.N
-    # device, reason = get_device("auto")
+    device, reason = get_device("xla")
     # print("Device:", device)
     # print("Reason:", reason)
     for e in range(start_iter, total_updates):
