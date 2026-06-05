@@ -23,6 +23,9 @@ from models.memory_buffer import MultiPPOMemory
 from wrapper.graph_wrapper import GraphWrapper
 from wrapper.observation_graph import ObservationGraph
 
+from utils.device import get_device
+
+
 
 def default_config():
     return {
@@ -156,6 +159,87 @@ def train_models(
 
     return last_losses
 
+
+def test_tpu_xla(size=2048, steps=20, force_pjrt=True):
+    """
+    Teste si TPU/XLA fonctionne avec PyTorch/XLA.
+
+    Args:
+        size: taille de la matrice, ex: 2048 => 2048x2048
+        steps: nombre d'itérations du benchmark
+        force_pjrt: si True, met PJRT_DEVICE=TPU avant import torch_xla
+
+    Returns:
+        dict avec les informations du test
+    """
+
+    if force_pjrt:
+        # Important: doit être fait avant import torch_xla
+        os.environ["PJRT_DEVICE"] = "TPU"
+
+    import torch
+    import torch_xla.core.xla_model as xm
+
+    print("🔍 Testing TPU/XLA...", flush=True)
+
+    device = xm.xla_device()
+    print("Device:", device, flush=True)
+
+    # Petit tensor test
+    x = torch.ones((4, 4), device=device)
+    y = x @ x
+
+    xm.mark_step()
+
+    print("Small tensor device:", y.device, flush=True)
+    print("Small result:", flush=True)
+    print(y.cpu(), flush=True)
+
+    print("\n🚀 Running matrix multiplication benchmark on TPU...", flush=True)
+
+    a = torch.randn((size, size), device=device)
+    b = torch.randn((size, size), device=device)
+
+    # Warmup: première exécution compile souvent
+    t0 = time.time()
+    c = a @ b
+    xm.mark_step()
+    warmup_time = time.time() - t0
+
+    print(f"Warmup time: {warmup_time:.2f}s", flush=True)
+
+    # Benchmark
+    t0 = time.time()
+
+    for _ in range(steps):
+        c = a @ b
+        xm.mark_step()
+
+    total_time = time.time() - t0
+    avg_time = total_time / steps
+
+    print(f"Benchmark steps: {steps}", flush=True)
+    print(f"Matrix size: {size}x{size}", flush=True)
+    print(f"Total time: {total_time:.2f}s", flush=True)
+    print(f"Average time per step: {avg_time:.4f}s", flush=True)
+
+    # Ramener une petite valeur vers CPU pour confirmer résultat réel
+    result = c[0, 0].detach().cpu().item()
+    print("Result sample:", result, flush=True)
+
+    print("✅ TPU test finished successfully", flush=True)
+
+    return {
+        "device": str(device),
+        "size": size,
+        "steps": steps,
+        "warmup_time": warmup_time,
+        "total_time": total_time,
+        "avg_time_per_step": avg_time,
+        "result_sample": result,
+    }
+
+
 def train(
     agents,
     hp,
@@ -186,6 +270,9 @@ def train(
     start_time = time.time()
 
     total_updates = hp.training_episodes // hp.N
+    device, reason = get_device("auto")
+    print("Device:", device)
+    print("Reason:", reason)
     for e in range(start_iter, total_updates):
         start_ep = e * hp.N
         end_ep = (e + 1) * hp.N
@@ -226,6 +313,9 @@ def train(
                 agent.save(outf=f"{checkpoint_dir}/{hp.fnames}-{i}_{e // 1000}k.pt")
 
         elapsed = time.time() - start_time
+        
+        if str(device).startswith("xla"):
+            test_tpu_xla(size=2048, steps=20, force_pjrt=False)
         if elapsed > max_training_time:
             break
 
