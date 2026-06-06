@@ -221,5 +221,6 @@ __marimo__/
 
 kaggle_run.py
 kernel-metadata.json
-checkpoints/
-logs/
+adversarial-marl-cyber/
+outputs/
+projet_detail.md
