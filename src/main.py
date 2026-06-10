@@ -11,7 +11,7 @@ from src.trainers import (
 )
 
 
-def build_config(command: str):
+def build_config(command: str, overrides=None):
 
     config_dir = Path("configs")
 
@@ -29,7 +29,7 @@ def build_config(command: str):
             config_dir / "eval.yaml"
         )
 
-    return load_config(paths)
+    return load_config(paths, overrides=overrides)
 
 
 def main():
@@ -46,10 +46,18 @@ def main():
         ],
     )
 
+    parser.add_argument(
+        "--override",
+        action="append",
+        default=[],
+        help="Override config values, e.g. --override train.device=cuda",
+    )
+
     args = parser.parse_args()
 
     cfg = build_config(
-        args.command
+        args.command,
+        overrides=args.override,
     )
 
     requested_device = cfg.get("train", {}).get("device", "auto")
@@ -68,7 +76,7 @@ def main():
 
     if args.command == "train":
 
-        run_train(cfg, device = device)
+        run_train(cfg, device=device)
 
     elif args.command == "eval":
 
