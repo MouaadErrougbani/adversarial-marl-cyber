@@ -1,0 +1,43 @@
+paths:
+  logs: logs
+  checkpoints: checkpoints
+runtime:
+  max_threads: 36
+  max_training_hours: 11.1
+train:
+  algorithm: ppo
+  seed: 1337
+  episode_len: 100
+  episodes_per_update: 5
+  workers: 5
+  batch_size: 25
+  training_episodes: 10
+  epochs: 2
+  resume: false
+  resume_name: null
+  resume_start_iter: null
+  agent_count: 5
+  device: auto # auto, cpu, cuda
+
+actor:
+  lr: 0.0003
+  hidden1: 256
+  hidden2: 128
+  encoder: gnn_gcn # gnn_gat, gnn_gcn
+critic:
+  lr: 0.001
+  hidden1: 256
+  hidden2: 128
+  encoder: gnn_gcn # gnn_gat, gnn_gcn
+hyperparams:
+  clip: 0.2
+  gamma: 0.99
+  lmbda: 0.95
+run:
+  name: model
+eval:
+  max_eps: 100
+  distribute: 1
+  seed: null
+  append_timestamp: false
+  output_path: tmp
