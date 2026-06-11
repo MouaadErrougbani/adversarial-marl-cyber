@@ -3,7 +3,6 @@
 from joblib import Parallel, delayed
 from src import MultiPPOMemory
 import torch
-from tqdm import tqdm
 
 
 @torch.no_grad()
@@ -37,10 +36,7 @@ def generate_episode(
         agents=agent_count,
     )
 
-    for ts in tqdm(
-        range(hp.episode_len),
-        desc=f"Generating episode {episode_idx}",
-    ):
+    for ts in range(hp.episode_len):
         actions = dict()
         memories = dict()
 

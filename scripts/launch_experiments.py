@@ -17,26 +17,29 @@ from src.utils.device import get_device
 ALL_EXPERIMENTS = [
     {
         "name": "ppo_gcn_gcn",
+        "algorithm": "ppo",
         "actor": "gnn_gcn",
         "critic": "gnn_gcn",
     },
     {
         "name": "ppo_gat_gat",
+        "algorithm": "ppo",
         "actor": "gnn_gat",
         "critic": "gnn_gat",
     },
     {
         "name": "ppo_gat_gcn",
+        "algorithm": "ppo",
         "actor": "gnn_gat",
         "critic": "gnn_gcn",
     },
     {
         "name": "ppo_gcn_gat",
+        "algorithm": "ppo",
         "actor": "gnn_gcn",
         "critic": "gnn_gat",
     },
 ]
-
 
 def build_command(
     exp,
@@ -56,6 +59,9 @@ def build_command(
 
         "--override",
         "train.device=cpu",
+
+        "--override",
+        f"train.algorithm={exp['algorithm']}",
 
         "--override",
         f"actor.encoder={exp['actor']}",
@@ -179,45 +185,26 @@ def main():
     total_workers = args.num_trains * args.workers
     total_threads = args.num_trains * args.max_threads
 
-    print("\n=== PARALLEL TRAINING PLAN ===", flush=True)
-    print(f"Number of trainings: {args.num_trains}", flush=True)
-    print(f"Workers per training: {args.workers}", flush=True)
-    print(f"Max threads per training: {args.max_threads}", flush=True)
-    print(f"Estimated total workers: {total_workers}", flush=True)
-    print(f"Estimated total max threads: {total_threads}", flush=True)
-    print("Training device: cpu", flush=True)
-    print(f"TPU monitor requested: {args.tpu_monitor}", flush=True)
-    print("==============================\n", flush=True)
 
     processes = []
     tpu_monitor_started = False
 
-    if args.tpu_monitor:
-        test_device, test_device_status = get_device("xla")
-        test_device_str = str(test_device).lower()
+  
+    test_device, test_device_status = get_device("xla")
+    test_device_str = str(test_device).lower()
 
-        print(
-            f"[launcher] TPU test device check: {test_device} ({test_device_status})",
-            flush=True,
+    if "xla" in test_device_str:
+        tpu_monitor_started = start_tpu_test_async(
+            interval_seconds=30 * 60,
+            batch=64,
+            seq_len=512,
+            hidden=1024,
+            layers=12,
+            heads=16,
+            steps=100,
         )
 
-        if "xla" in test_device_str:
-            tpu_monitor_started = start_tpu_test_async(
-                interval_seconds=30 * 60,
-                batch=64,
-                seq_len=512,
-                hidden=1024,
-                layers=12,
-                heads=16,
-                steps=100,
-            )
 
-            if tpu_monitor_started:
-                print("[launcher] TPU monitor started", flush=True)
-            else:
-                print("[launcher] TPU monitor already running", flush=True)
-        else:
-            print("[launcher] TPU monitor not started: XLA/TPU unavailable", flush=True)
 
     try:
         for exp in selected_experiments:
@@ -230,12 +217,7 @@ def main():
                 epochs=args.epochs,
             )
 
-            print(
-                f"Starting {exp['name']} "
-                f"actor={exp['actor']} "
-                f"critic={exp['critic']}",
-                flush=True,
-            )
+
 
             process = subprocess.Popen(
                 cmd,
@@ -251,7 +233,6 @@ def main():
 
             time.sleep(args.delay)
 
-        print("\nAll trainings launched.\n", flush=True)
 
         failed = False
 
@@ -276,7 +257,6 @@ def main():
     finally:
         if tpu_monitor_started:
             stop_tpu_test_async()
-            print("[launcher] TPU monitor stopped", flush=True)
 
 
 if __name__ == "__main__":

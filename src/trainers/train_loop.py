@@ -22,7 +22,7 @@ def train_loop(
     agents,
     envs,
     hp,
-    cfg,
+    fnames,
     log,
     start_iter,
     log_dir,
@@ -68,7 +68,7 @@ def train_loop(
 
         print(
             "=" * 20,
-            f"Episode {start_ep} -> {end_ep}",
+            f"Episode {start_ep} --{fnames}--> {end_ep}",
             "=" * 20,
             flush=True,
         )
@@ -212,44 +212,8 @@ def train_loop(
         # Print
         #
 
-        losses_str = ",".join(
-            [
-                f"{loss:.4f}"
-                for loss in total_losses
-            ]
-        )
 
-        actor_losses_str = ",".join(
-            [
-                f"{loss:.4f}"
-                for loss in actor_losses
-            ]
-        )
 
-        critic_losses_str = ",".join(
-            [
-                f"{loss:.4f}"
-                for loss in critic_losses
-            ]
-        )
-
-        print(
-            f"[{update}] "
-            f"Total loss: [{losses_str}]",
-            flush=True,
-        )
-
-        print(
-            f"[{update}] "
-            f"Actor loss: [{actor_losses_str}]",
-            flush=True,
-        )
-
-        print(
-            f"[{update}] "
-            f"Critic loss: [{critic_losses_str}]",
-            flush=True,
-        )
 
         print(
             f"Avg reward: {avg_reward:.4f} | "

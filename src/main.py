@@ -63,15 +63,6 @@ def main():
     device, device_status = get_device(requested_device)
     device_str = str(device).lower()
 
-    print(
-        "\n=== CONFIGURATION LOADED ===\n"
-    )
-
-    print(cfg)
-
-    print(
-        f"\n=== TRAINING DEVICE: {device} ({device_status}) ===\n"
-    )
 
     if args.command == "train":
         
