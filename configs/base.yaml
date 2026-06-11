@@ -6,7 +6,7 @@ runtime:
   max_training_hours: 11.1
 train:
   algorithm: ppo
-  seed: 1337
+  seed: 42
   episode_len: 500
   episodes_per_update: 25
   workers: 25

@@ -111,39 +111,58 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
         return total_loss
 
     def learn(self, verbose=False):
-        '''        
-        This runs the PPO update algorithm on memories stored in self.memory 
-        Assumes that an external process is adding memories to the buffer
-        '''
-        
+        """
+        Runs the PPO update algorithm on memories stored in self.memory.
+
+        Returns:
+            dict with averaged losses:
+            {
+                "total_loss": float,
+                "actor_loss": float,
+                "critic_loss": float,
+            }
+        """
+
+        total_loss_sum = 0.0
+        actor_loss_sum = 0.0
+        critic_loss_sum = 0.0
+        update_count = 0
 
         for e in range(self.epochs):
-            s,a,v,p,r,t, batches = self.memory.get_batches()
+            s, a, v, p, r, t, batches = self.memory.get_batches()
 
             returns = self._compute_returns(r, t)
-            
             advantages = self._compute_advantages(returns, v)
 
             device = self.device
-            # Optimize for clipped advantage for each minibatch 
-            for b_idx,b in enumerate(batches):
+
+            for b_idx, b in enumerate(batches):
                 b = b.tolist()
 
-                # Combine graphs from minibatches so GNN is called once
                 s_ = [s[idx] for idx in b]
                 a_ = [a[idx] for idx in b]
+
                 batched_states = combine_marl_states(s_)
                 batched_states = self._move_to_device(batched_states)
 
                 self._zero_grad()
 
-                # Forward pass 
                 dist = self.actor(*batched_states)
                 critic_vals = self.critic(*batched_states)
 
-                actions = torch.tensor(a_, dtype=torch.long, device=device)
-                new_log_probs  = dist.log_prob(actions)
-                old_log_probs = torch.tensor([p[i] for i in b], dtype=torch.float32, device=device)
+                actions = torch.tensor(
+                    a_,
+                    dtype=torch.long,
+                    device=device,
+                )
+
+                new_log_probs = dist.log_prob(actions)
+
+                old_log_probs = torch.tensor(
+                    [p[i] for i in b],
+                    dtype=torch.float32,
+                    device=device,
+                )
 
                 a_t = advantages[b].to(device)
                 batch_returns = returns[b].to(device)
@@ -151,35 +170,65 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                 actor_loss = self._compute_actor_loss(
                     new_log_probs=new_log_probs,
                     old_log_probs=old_log_probs,
-                    advantages=a_t
-                )
-                
-                critic_loss = self._compute_critic_loss(
-                    critic_values=critic_vals,
-                    returns=batch_returns
+                    advantages=a_t,
                 )
 
-                entropy_loss = self._compute_entropy_loss(dist)
+                critic_loss = self._compute_critic_loss(
+                    critic_values=critic_vals,
+                    returns=batch_returns,
+                )
+
+                entropy_loss = self._compute_entropy_loss(
+                    dist
+                )
 
                 total_loss = self._compute_total_loss(
                     actor_loss=actor_loss,
                     critic_loss=critic_loss,
-                    entropy_loss=entropy_loss
+                    entropy_loss=entropy_loss,
                 )
 
                 total_loss.backward()
                 self._step()
 
-                # Print loss for each minibatch if verbose 
-                # (aggregate loss is printed regardless)
+                total_loss_sum += float(
+                    total_loss.detach().cpu().item()
+                )
+
+                actor_loss_sum += float(
+                    actor_loss.detach().cpu().item()
+                )
+
+                critic_loss_sum += float(
+                    critic_loss.detach().cpu().item()
+                )
+
+                update_count += 1
+
                 if verbose:
-                    print(f'[{e}] C-Loss: {0.5*critic_loss.item():0.4f}  A-Loss: {actor_loss.item():0.4f} E-loss: {-entropy_loss.item()*0.01:0.4f}', flush=True)
+                    print(
+                        f"[{e}] "
+                        f"C-Loss: {0.5 * critic_loss.item():0.4f} "
+                        f"A-Loss: {actor_loss.item():0.4f} "
+                        f"E-loss: {-entropy_loss.item() * 0.01:0.4f}",
+                        flush=True,
+                    )
 
-
-
-        # After we have sampled our minibatches e times, clear the memory buffer
         self.memory.clear()
-        return total_loss.item()
+
+        if update_count == 0:
+            return {
+                "total_loss": 0.0,
+                "actor_loss": 0.0,
+                "critic_loss": 0.0,
+            }
+
+        return {
+            "total_loss": total_loss_sum / update_count,
+            "actor_loss": actor_loss_sum / update_count,
+            "critic_loss": critic_loss_sum / update_count,
+        }
+
 
 def load(in_f, device="cpu"):
     data = torch.load(in_f, map_location="cpu")

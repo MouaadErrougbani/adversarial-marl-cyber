@@ -159,6 +159,12 @@ def load_logs(
     """
     Charge les logs d'entraînement
     et calcule start_iter.
+
+    New log format:
+        list[dict]
+
+    Old log format:
+        list[tuple] = [(avg_reward, update, avg_loss), ...]
     """
 
     log = []
@@ -173,18 +179,51 @@ def load_logs(
 
         if os.path.exists(log_path):
 
-            log = torch.load(
+            loaded_log = torch.load(
                 log_path,
                 map_location="cpu",
             )
 
-            start_iter = len(log)
+            if not isinstance(loaded_log, list):
+                print(
+                    f"Warning: invalid log format in {log_path}. "
+                    f"Expected list, got {type(loaded_log)}. "
+                    f"Starting with empty log."
+                )
 
-            print(
-                f"Resume enabled: "
-                f"loaded log {log_path} "
-                f"(start_iter={start_iter})"
-            )
+                log = []
+                start_iter = 0
+
+            else:
+                log = loaded_log
+                start_iter = len(log)
+
+                if len(log) > 0:
+                    first_entry = log[0]
+
+                    if isinstance(first_entry, tuple):
+                        print(
+                            "Warning: old tuple log format detected. "
+                            "It is recommended to start a new run "
+                            "or convert old logs before resuming."
+                        )
+
+                    elif isinstance(first_entry, dict):
+                        print(
+                            "New dict log format detected."
+                        )
+
+                    else:
+                        print(
+                            f"Warning: unknown log entry type: "
+                            f"{type(first_entry)}"
+                        )
+
+                print(
+                    f"Resume enabled: "
+                    f"loaded log {log_path} "
+                    f"(start_iter={start_iter})"
+                )
 
         else:
 
@@ -205,3 +244,4 @@ def load_logs(
         )
 
     return log, start_iter
+
