@@ -121,22 +121,22 @@ def train_loop(
         # Sync rollout agents only if training is not CPU
         #
 
-        if "cpu" not in device_str:
-            for rollout_agent, train_agent in zip(rollout_agents, agents):
-                actor_state = {
-                    k: v.detach().cpu()
-                    for k, v in train_agent.actor.state_dict().items()
-                }
+        # if "cpu" not in device_str:
+        #     for rollout_agent, train_agent in zip(rollout_agents, agents):
+        #         actor_state = {
+        #             k: v.detach().cpu()
+        #             for k, v in train_agent.actor.state_dict().items()
+        #         }
 
-                critic_state = {
-                    k: v.detach().cpu()
-                    for k, v in train_agent.critic.state_dict().items()
-                }
+        #         critic_state = {
+        #             k: v.detach().cpu()
+        #             for k, v in train_agent.critic.state_dict().items()
+        #         }
 
-                rollout_agent.actor.load_state_dict(actor_state)
-                rollout_agent.critic.load_state_dict(critic_state)
-                rollout_agent.to("cpu")
-                rollout_agent.train()
+        #         rollout_agent.actor.load_state_dict(actor_state)
+        #         rollout_agent.critic.load_state_dict(critic_state)
+        #         rollout_agent.to("cpu")
+        #         rollout_agent.train()
 
         #
         # Metrics: rewards
