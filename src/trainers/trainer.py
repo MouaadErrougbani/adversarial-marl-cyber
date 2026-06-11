@@ -22,6 +22,8 @@ from .train_loop import (
 )
 
 
+
+
 def run_train(cfg, device = "cpu"):
     """
     Main training entrypoint.
@@ -49,8 +51,6 @@ def run_train(cfg, device = "cpu"):
     #
 
     resume_name = cfg["train"].get("resume_name") or cfg["run"]["name"]
-
-
 
     log, start_iter = load_logs(
         log_dir=log_dir,
@@ -166,4 +166,5 @@ def run_train(cfg, device = "cpu"):
         log_dir=log_dir,
         checkpoint_dir=checkpoint_dir,
         max_threads=max_threads,
+        device=device,
     )

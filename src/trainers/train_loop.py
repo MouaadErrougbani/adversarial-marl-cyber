@@ -15,11 +15,6 @@ from .checkpoint import (
     save_checkpoints,
 )
 
-from .tpu import (
-    start_tpu_test_async,
-    check_tpu_test_async,
-)
-
 
 def train_loop(
     agents,
@@ -31,6 +26,7 @@ def train_loop(
     log_dir,
     checkpoint_dir,
     max_threads,
+    device="cpu",
 ):
     """
     Main PPO training loop.
@@ -38,21 +34,18 @@ def train_loop(
     for agent in agents:
         agent.train()
 
-    rollout_agents = [
-        copy.deepcopy(agent).to("cpu")
-        for agent in agents
-    ]
+    device_str = str(device).lower()
+
+    if "cpu" in device_str:
+        rollout_agents = agents
+    else:
+        rollout_agents = [
+            copy.deepcopy(agent).to("cpu")
+            for agent in agents
+        ]
 
     for agent in rollout_agents:
         agent.train()
-
-    max_training_time = (
-        cfg["runtime"]["max_training_hours"]
-        * 60
-        * 60
-    )
-
-    start_time = time.time()
 
     agent_count = len(agents)
 
@@ -60,6 +53,7 @@ def train_loop(
         hp.training_episodes
         // hp.N
     )
+
 
     for update in range(
         start_iter,
@@ -189,38 +183,7 @@ def train_loop(
             episodes_per_update=hp.N,
         )
 
-        #
-        # TPU monitoring
-        #
 
-        # check_tpu_test_async()
-
-        # start_tpu_test_async(
-        #     batch=64,
-        #     seq_len=512,
-        #     hidden=1024,
-        #     layers=12,
-        #     heads=16,
-        #     steps=100,
-        # )
-
-        #
-        # Training time limit
-        #
-
-        elapsed = (
-            time.time()
-            - start_time
-        )
-
-        if elapsed > max_training_time:
-
-            print(
-                "\nMaximum training time reached.",
-                flush=True,
-            )
-
-            break
 
     print(
         "\nTraining finished.",

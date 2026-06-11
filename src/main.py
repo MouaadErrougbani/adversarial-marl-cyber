@@ -10,9 +10,13 @@ from src.trainers import (
     run_train,
 )
 
+from src.trainers.tpu import (
+    start_tpu_test_async,
+    stop_tpu_test_async,
+)
+
 
 def build_config(command: str, overrides=None):
-
     config_dir = Path("configs")
 
     paths = [
@@ -33,7 +37,6 @@ def build_config(command: str, overrides=None):
 
 
 def main():
-
     parser = argparse.ArgumentParser(
         description="Adversarial MARL Cyber"
     )
@@ -61,8 +64,8 @@ def main():
     )
 
     requested_device = cfg.get("train", {}).get("device", "auto")
-
     device, device_status = get_device(requested_device)
+    device_str = str(device).lower()
 
     print(
         "\n=== CONFIGURATION LOADED ===\n"
@@ -75,11 +78,27 @@ def main():
     )
 
     if args.command == "train":
+        tpu_monitor_started = False
 
-        run_train(cfg, device=device)
+        if "xla" not in device_str:
+            tpu_monitor_started = start_tpu_test_async(
+                interval_seconds=30 * 60,
+                batch=64,
+                seq_len=512,
+                hidden=1024,
+                layers=12,
+                heads=16,
+                steps=100,
+            )
+
+        try:
+            run_train(cfg, device=device)
+
+        finally:
+            if tpu_monitor_started:
+                stop_tpu_test_async()
 
     elif args.command == "eval":
-
         raise NotImplementedError(
             "Evaluation pipeline not implemented yet."
         )
