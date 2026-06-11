@@ -10,10 +10,6 @@ from src.trainers import (
     run_train,
 )
 
-from src.trainers.tpu import (
-    start_tpu_test_async,
-    stop_tpu_test_async,
-)
 
 
 def build_config(command: str, overrides=None):
@@ -78,25 +74,8 @@ def main():
     )
 
     if args.command == "train":
-        tpu_monitor_started = False
-
-        if "xla" not in device_str:
-            tpu_monitor_started = start_tpu_test_async(
-                interval_seconds=30 * 60,
-                batch=64,
-                seq_len=512,
-                hidden=1024,
-                layers=12,
-                heads=16,
-                steps=100,
-            )
-
-        try:
-            run_train(cfg, device=device)
-
-        finally:
-            if tpu_monitor_started:
-                stop_tpu_test_async()
+        
+        run_train(cfg, device=device)
 
     elif args.command == "eval":
         raise NotImplementedError(

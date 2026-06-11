@@ -1,9 +1,15 @@
 # scripts/launch_experiments.py
 
 import argparse
+import os
 import subprocess
 import sys
 import time
+
+from src.trainers.tpu import (
+    start_tpu_test_async,
+    stop_tpu_test_async,
+)
 
 
 ALL_EXPERIMENTS = [
@@ -38,10 +44,11 @@ def build_command(
     training_episodes,
     batch_size,
     epochs,
-    tpu_monitor,
 ):
     cmd = [
         sys.executable,
+        "-W",
+        "ignore",
         "-m",
         "src.main",
         "train",
@@ -59,13 +66,13 @@ def build_command(
         f"run.name={exp['name']}",
 
         "--override",
+        "train.resume=false",
+
+        "--override",
         f"train.workers={workers}",
 
         "--override",
         f"runtime.max_threads={max_threads}",
-
-        "--override",
-        f"runtime.tpu_monitor={str(tpu_monitor).lower()}",
     ]
 
     if training_episodes is not None:
@@ -125,7 +132,7 @@ def main():
         "--device",
         type=str,
         default="cpu",
-        choices=["cpu", "cuda", "auto"],
+        choices=["cpu", "cuda", "auto", "xla"],
         help="Device for each training",
     )
 
@@ -153,7 +160,7 @@ def main():
     parser.add_argument(
         "--tpu-monitor",
         action="store_true",
-        help="Enable TPU monitor",
+        help="Start one TPU monitor in the launcher process",
     )
 
     parser.add_argument(
@@ -165,9 +172,12 @@ def main():
 
     args = parser.parse_args()
 
+    if args.num_trains < 1:
+        raise ValueError("--num-trains must be >= 1")
+
     if args.num_trains > len(ALL_EXPERIMENTS):
         raise ValueError(
-            f"num-trains={args.num_trains} but only "
+            f"--num-trains={args.num_trains}, but only "
             f"{len(ALL_EXPERIMENTS)} experiments are defined."
         )
 
@@ -176,54 +186,94 @@ def main():
     total_workers = args.num_trains * args.workers
     total_threads = args.num_trains * args.max_threads
 
-    print("\n=== PARALLEL TRAINING PLAN ===")
-    print(f"Number of trainings: {args.num_trains}")
-    print(f"Workers per training: {args.workers}")
-    print(f"Max threads per training: {args.max_threads}")
-    print(f"Estimated total workers: {total_workers}")
-    print(f"Estimated total max threads: {total_threads}")
-    print(f"Device: {args.device}")
-    print("==============================\n")
+    print("\n=== PARALLEL TRAINING PLAN ===", flush=True)
+    print(f"Number of trainings: {args.num_trains}", flush=True)
+    print(f"Workers per training: {args.workers}", flush=True)
+    print(f"Max threads per training: {args.max_threads}", flush=True)
+    print(f"Estimated total workers: {total_workers}", flush=True)
+    print(f"Estimated total max threads: {total_threads}", flush=True)
+    print(f"Device: {args.device}", flush=True)
+    print(f"TPU monitor: {args.tpu_monitor}", flush=True)
+    print("==============================\n", flush=True)
 
     processes = []
+    tpu_monitor_started = False
 
-    for exp in selected_experiments:
-        cmd = build_command(
-            exp=exp,
-            device=args.device,
-            workers=args.workers,
-            max_threads=args.max_threads,
-            training_episodes=args.training_episodes,
-            batch_size=args.batch_size,
-            epochs=args.epochs,
-            tpu_monitor=args.tpu_monitor,
+    if args.tpu_monitor and args.device != "xla":
+        tpu_monitor_started = start_tpu_test_async(
+            interval_seconds=30 * 60,
+            batch=64,
+            seq_len=512,
+            hidden=1024,
+            layers=12,
+            heads=16,
+            steps=100,
         )
 
-        print(
-            f"Starting {exp['name']} "
-            f"actor={exp['actor']} critic={exp['critic']}",
-            flush=True,
-        )
+        if tpu_monitor_started:
+            print("[launcher] TPU monitor started", flush=True)
+        else:
+            print("[launcher] TPU monitor already running", flush=True)
 
-        process = subprocess.Popen(cmd)
-        processes.append(
-            (
-                exp["name"],
-                process,
+    try:
+        for exp in selected_experiments:
+            cmd = build_command(
+                exp=exp,
+                device=args.device,
+                workers=args.workers,
+                max_threads=args.max_threads,
+                training_episodes=args.training_episodes,
+                batch_size=args.batch_size,
+                epochs=args.epochs,
             )
-        )
 
-        time.sleep(args.delay)
+            print(
+                f"Starting {exp['name']} "
+                f"actor={exp['actor']} "
+                f"critic={exp['critic']}",
+                flush=True,
+            )
 
-    print("\nAll trainings launched.\n", flush=True)
+            process = subprocess.Popen(
+                cmd,
+                env=os.environ.copy(),
+            )
 
-    for name, process in processes:
-        returncode = process.wait()
+            processes.append(
+                (
+                    exp["name"],
+                    process,
+                )
+            )
 
-        print(
-            f"{name} finished with returncode {returncode}",
-            flush=True,
-        )
+            time.sleep(args.delay)
+
+        print("\nAll trainings launched.\n", flush=True)
+
+        failed = False
+
+        for name, process in processes:
+            returncode = process.wait()
+
+            if returncode == 0:
+                print(
+                    f"✅ {name} finished successfully",
+                    flush=True,
+                )
+            else:
+                failed = True
+                print(
+                    f"❌ {name} failed with returncode {returncode}",
+                    flush=True,
+                )
+
+        if failed:
+            raise SystemExit(1)
+
+    finally:
+        if tpu_monitor_started:
+            stop_tpu_test_async()
+            print("[launcher] TPU monitor stopped", flush=True)
 
 
 if __name__ == "__main__":
