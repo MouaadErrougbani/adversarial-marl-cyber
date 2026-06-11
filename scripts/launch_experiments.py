@@ -11,6 +11,8 @@ from src.trainers.tpu import (
     stop_tpu_test_async,
 )
 
+from src.utils.device import get_device
+
 
 ALL_EXPERIMENTS = [
     {
@@ -38,7 +40,6 @@ ALL_EXPERIMENTS = [
 
 def build_command(
     exp,
-    device,
     workers,
     max_threads,
     training_episodes,
@@ -54,7 +55,7 @@ def build_command(
         "train",
 
         "--override",
-        f"train.device={device}",
+        "train.device=cpu",
 
         "--override",
         f"actor.encoder={exp['actor']}",
@@ -129,14 +130,6 @@ def main():
     )
 
     parser.add_argument(
-        "--device",
-        type=str,
-        default="cpu",
-        choices=["cpu", "cuda", "auto", "xla"],
-        help="Device for each training",
-    )
-
-    parser.add_argument(
         "--training-episodes",
         type=int,
         default=None,
@@ -160,7 +153,7 @@ def main():
     parser.add_argument(
         "--tpu-monitor",
         action="store_true",
-        help="Start one TPU monitor in the launcher process",
+        help="If XLA/TPU is available, start one TPU monitor in the launcher process",
     )
 
     parser.add_argument(
@@ -192,34 +185,44 @@ def main():
     print(f"Max threads per training: {args.max_threads}", flush=True)
     print(f"Estimated total workers: {total_workers}", flush=True)
     print(f"Estimated total max threads: {total_threads}", flush=True)
-    print(f"Device: {args.device}", flush=True)
-    print(f"TPU monitor: {args.tpu_monitor}", flush=True)
+    print("Training device: cpu", flush=True)
+    print(f"TPU monitor requested: {args.tpu_monitor}", flush=True)
     print("==============================\n", flush=True)
 
     processes = []
     tpu_monitor_started = False
 
-    if args.tpu_monitor and args.device != "xla":
-        tpu_monitor_started = start_tpu_test_async(
-            interval_seconds=30 * 60,
-            batch=64,
-            seq_len=512,
-            hidden=1024,
-            layers=12,
-            heads=16,
-            steps=100,
+    if args.tpu_monitor:
+        test_device, test_device_status = get_device("xla")
+        test_device_str = str(test_device).lower()
+
+        print(
+            f"[launcher] TPU test device check: {test_device} ({test_device_status})",
+            flush=True,
         )
 
-        if tpu_monitor_started:
-            print("[launcher] TPU monitor started", flush=True)
+        if "xla" in test_device_str:
+            tpu_monitor_started = start_tpu_test_async(
+                interval_seconds=30 * 60,
+                batch=64,
+                seq_len=512,
+                hidden=1024,
+                layers=12,
+                heads=16,
+                steps=100,
+            )
+
+            if tpu_monitor_started:
+                print("[launcher] TPU monitor started", flush=True)
+            else:
+                print("[launcher] TPU monitor already running", flush=True)
         else:
-            print("[launcher] TPU monitor already running", flush=True)
+            print("[launcher] TPU monitor not started: XLA/TPU unavailable", flush=True)
 
     try:
         for exp in selected_experiments:
             cmd = build_command(
                 exp=exp,
-                device=args.device,
                 workers=args.workers,
                 max_threads=args.max_threads,
                 training_episodes=args.training_episodes,
