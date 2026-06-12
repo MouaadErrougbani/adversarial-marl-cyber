@@ -188,10 +188,10 @@ def main():
     tpu_monitor_started = False
 
     print("get_device test", flush=True)
-    test_device, test_device_status = get_device("xla")
-    test_device_str = str(test_device).lower()
-    print(f"get_device test: {test_device} ({test_device_status})", flush=True)
-    if False:
+    # test_device, test_device_status = get_device("xla")
+    # test_device_str = str(test_device).lower()
+    # print(f"get_device test: {test_device} ({test_device_status})", flush=True)
+    if True:
         tpu_monitor_started = start_tpu_test_async(
             interval_seconds=30 * 60,
             batch=64,
