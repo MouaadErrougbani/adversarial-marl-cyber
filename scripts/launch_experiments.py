@@ -110,6 +110,7 @@ def build_command(
 
 
 def main():
+    print("🚀 Launching experiments... main")
     parser = argparse.ArgumentParser(
         description="Launch multiple PPO experiments in parallel"
     )
@@ -170,6 +171,7 @@ def main():
     )
 
     args = parser.parse_args()
+    print("atgs finished")
 
     if args.num_trains < 1:
         raise ValueError("--num-trains must be >= 1")
@@ -182,17 +184,13 @@ def main():
 
     selected_experiments = ALL_EXPERIMENTS[: args.num_trains]
 
-    total_workers = args.num_trains * args.workers
-    total_threads = args.num_trains * args.max_threads
-
-
     processes = []
     tpu_monitor_started = False
 
-  
+    print("get_device test")
     test_device, test_device_status = get_device("xla")
     test_device_str = str(test_device).lower()
-
+    print(f"get_device test: {test_device} ({test_device_status})")
     if "xla" in test_device_str:
         tpu_monitor_started = start_tpu_test_async(
             interval_seconds=30 * 60,
@@ -204,9 +202,10 @@ def main():
             steps=100,
         )
 
-
+    print("test_device lunch finished")
 
     try:
+        print("Launching experiments:")
         for exp in selected_experiments:
             cmd = build_command(
                 exp=exp,
@@ -217,7 +216,7 @@ def main():
                 epochs=args.epochs,
             )
 
-
+            print(f"Launching experiment: {exp['name']}")
 
             process = subprocess.Popen(
                 cmd,
