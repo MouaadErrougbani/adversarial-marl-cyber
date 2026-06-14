@@ -179,66 +179,46 @@ def main():
     selected_experiments = ALL_EXPERIMENTS[: args.num_trains]
 
     processes = []
-    tpu_monitor_started = False
-
-    
-
-    
-    import time 
-
-    time.sleep(10*60)
 
 
-    # try:
-    #     for exp in selected_experiments:
-    #         cmd = build_command(
-    #             exp=exp,
-    #             workers=args.workers,
-    #             max_threads=args.max_threads,
-    #             training_episodes=args.training_episodes,
-    #             batch_size=args.batch_size,
-    #             epochs=args.epochs,
-    #         )
-
-
-    #         process = subprocess.Popen(
-    #             cmd,
-    #             env=os.environ.copy(),
-    #         )
-
-    #         processes.append(
-    #             (
-    #                 exp["name"],
-    #                 process,
-    #             )
-    #         )
-
-    #         time.sleep(args.delay)
-
-
-    #     failed = False
-
-    #     for name, process in processes:
-    #         returncode = process.wait()
-
-    #         if returncode == 0:
-    #             print(
-    #                 f"✅ {name} finished successfully",
-    #                 flush=True,
-    #             )
-    #         else:
-    #             failed = True
-    #             print(
-    #                 f"❌ {name} failed with returncode {returncode}",
-    #                 flush=True,
-    #             )
-
-    #     if failed:
-    #         raise SystemExit(1)
-    #     pass
-    # finally:
-    #     if tpu_monitor_started:
-    #         stop_tpu_test_async()
+   
+    for exp in selected_experiments:
+        cmd = build_command(
+            exp=exp,
+            workers=args.workers,
+            max_threads=args.max_threads,
+            training_episodes=args.training_episodes,
+            batch_size=args.batch_size,
+            epochs=args.epochs,
+        )
+        process = subprocess.Popen(
+            cmd,
+            env=os.environ.copy(),
+        )
+        processes.append(
+            (
+                exp["name"],
+                process,
+            )
+        )
+        # time.sleep(args.delay)
+    failed = False
+    for name, process in processes:
+        returncode = process.wait()
+        if returncode == 0:
+            print(
+                f"✅ {name} finished successfully",
+                flush=True,
+            )
+        else:
+            failed = True
+            print(
+                f"❌ {name} failed with returncode {returncode}",
+                flush=True,
+            )
+    if failed:
+        raise SystemExit(1)
+  
 
 
 if __name__ == "__main__":
