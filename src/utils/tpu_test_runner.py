@@ -6,6 +6,8 @@ import argparse
 
 
 def main():
+
+    print("[TPU test] starting", flush=True)
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch", type=int, default=64)
     parser.add_argument("--seq-len", type=int, default=512)
@@ -17,11 +19,11 @@ def main():
 
     # Important avant import torch_xla
     os.environ.setdefault("PJRT_DEVICE", "TPU")
-
+    print("[TPU test] Importing torch and torch_xla", flush=True)
     import torch
     import torch.nn as nn
     import torch_xla.core.xla_model as xm
-
+    print("[TPU test] torch and torch_xla imported", flush=True)
 
     device = xm.xla_device()
     device_str = str(device)
@@ -93,11 +95,12 @@ def main():
         xm.mark_step()
 
         if step % 10 == 0:
-            loss_value = loss.detach().cpu().item()
+            print(f"[TPU test] Step {step}, Loss: {loss.detach().cpu().item()}", flush=True)
 
     final_loss = loss.detach().cpu().item()
     total_time = time.time() - t0
 
+    print(f"[TPU test] Final loss: {final_loss}, Total time: {total_time}", flush=True)
     return 0
 
 
