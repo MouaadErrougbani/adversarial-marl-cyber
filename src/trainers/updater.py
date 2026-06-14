@@ -14,15 +14,15 @@ def train_models(agents):
 
         return losses
 
-    agent_count = len(agents)
+    num_agents = len(agents)
 
     def learn(i):
         return agents[i].learn()
 
     return Parallel(
         prefer="threads",
-        n_jobs=agent_count,
+        n_jobs=num_agents,
     )(
         delayed(learn)(i)
-        for i in range(agent_count)
+        for i in range(num_agents)
     )

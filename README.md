@@ -1,3 +1,4 @@
+export PYTHONPATH=$PYTHONPATH:~/rl_marl/cage-challenge-4
  # Adversarial MARL Cyber
 
 Graph-based multi-agent reinforcement learning (MARL) for CybORG/CAGE4. The project trains five blue agents using PPO and a graph representation of the enterprise network, then packages the trained agents for evaluation and submission.

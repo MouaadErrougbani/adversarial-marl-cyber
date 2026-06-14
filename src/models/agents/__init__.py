@@ -5,7 +5,12 @@ from .ppo_agent import (
     load,
 )
 
+from .mappo_agent import (
+    InductiveGraphMAPPOAgent,
+)
+
 __all__ = [
     "InductiveGraphPPOAgent",
+    "InductiveGraphMAPPOAgent",
     "load",
 ]

@@ -56,3 +56,12 @@ def combine_marl_states(s):
 
     # Is_Multi should be the same for all elements
     return xs,eis,gvs, srvs,nsrvs, usrs,nusrs, edges, is_multi[0]
+
+
+def build_global_observation(
+    observations
+):
+
+    observations = combine_marl_states(observations)
+
+    return observations

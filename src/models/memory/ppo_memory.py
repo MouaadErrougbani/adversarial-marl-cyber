@@ -1,56 +1,74 @@
 # src/models/memory/ppo_memory.py
 
 import torch 
+from .memory import Memory
 
-class PPOMemory:
+class PPOMemory(Memory):
     '''
     Holds memories for agents that are relevant to the 
     PPO optimization procedure
     '''
-    def __init__(self, bs):
-        self.s = []
-        self.a = []
-        self.v = []
-        self.p = []
-        self.r = []
-        self.t = []
+    def __init__(self, batch_size=2500):
+        super().__init__(batch_size)
+        self.states = []
+        self.actions = []
+        self.values = []
+        self.log_probs = []
+        self.rewards = []
+        self.terminals = []
 
-        self.bs = bs 
 
-    def remember(self, s,a,v,p,r,t):
+
+    def remember(self, state, action, value, log_prob, reward, terminal):
         '''
-        Pushes new memory into the buffer 
+        Ajoute une nouvelle expérience dans la mémoire. 
 
         Args:
-            s: State
-            a: Action
-            v: Value (critic output)
-            p: Log Prob (actor output)
-            r: Reward
-            t: Terminal 
+            state: State
+            action: Action
+            value: Value (critic output)
+            log_prob: Log Prob (actor output)
+            reward: Reward
+            terminal: Terminal 
         '''
-        self.s.append(s)
-        self.a.append(a)
-        self.v.append(v)
-        self.p.append(p)
-        self.r.append(r) 
-        self.t.append(t)
+        self.states.append(state)
+        self.actions.append(action)
+        self.values.append(value)
+        self.log_probs.append(log_prob)
+        self.rewards.append(reward)
+        self.terminals.append(terminal)
 
     def clear(self): 
         '''
-        Empties the memory buffer 
+        Vide complètement le buffer mémoire. 
         '''
-        self.s = []; self.a = []
-        self.v = []; self.p = []
-        self.r = []; self.t = []
+        self.states.clear()
+        self.actions.clear()
+        self.values.clear()
+        self.log_probs.clear()
+        self.rewards.clear()
+        self.terminals.clear()
+
 
     def get_batches(self):
+        print("Get batches called, PPOMemory")
         '''
         Return chunks of the shuffled memory buffer 
-        randomly partitioned into `self.bs`-sized chunks 
+        randomly partitioned into `self.batch_size`-sized chunks 
+        Returns:
+            states, actions, values, log_probs, rewards, terminals, batch_idxs
         '''
-        idxs = torch.randperm(len(self.a))
-        batch_idxs = idxs.split(self.bs)
+        idxs = torch.randperm(len(self.actions))
+        batch_idxs = idxs.split(self.batch_size)
 
-        return self.s, self.a, self.v, \
-            self.p, self.r, self.t, batch_idxs
+        return self.states, self.actions, self.values, \
+            self.log_probs, self.rewards, self.terminals, batch_idxs
+
+    def __len__(self):
+        """
+        Retourne le nombre d'expériences stockées.
+        Returns:
+            int: Le nombre d'expériences actuellement stockées dans la mémoire.
+        """
+        return len(self.actions)
+

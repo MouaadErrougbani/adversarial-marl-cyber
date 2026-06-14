@@ -49,7 +49,7 @@ def train_loop(
     for agent in rollout_agents:
         agent.train()
 
-    agent_count = len(agents)
+    num_agents = len(agents)
 
     total_updates = (
         hp.training_episodes
@@ -83,7 +83,7 @@ def train_loop(
             rollout_agents,
             envs,
             hp,
-            agent_count,
+            num_agents,
             max_threads,
         )
 
@@ -99,8 +99,8 @@ def train_loop(
             for m in zip(*memories)
         ]
 
-        for i in range(agent_count):
-            agents[i].memory.mems = (
+        for i in range(num_agents):
+            agents[i].memory.memories = (
                 memories[i]
             )
 
@@ -246,7 +246,7 @@ def train_loop(
                 reward
             )
 
-        for i in range(agent_count):
+        for i in range(num_agents):
             log_entry[f"total_loss_agent_{i}"] = float(
                 total_losses[i]
             )

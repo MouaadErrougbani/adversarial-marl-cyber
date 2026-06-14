@@ -2,6 +2,8 @@
 
 from .agents import (
     InductiveGraphPPOAgent,
+    InductiveGraphMAPPOAgent,
+
 )
 
 from .gnn import (
@@ -16,6 +18,8 @@ from .gnn import (
 from .memory import (
     PPOMemory,
     MultiPPOMemory,
+    MAPPOMemory,
+    MultiMAPPOMemory,
 )
 
 from .utils import (
@@ -42,6 +46,8 @@ __all__ = [
     # memory
     "PPOMemory",
     "MultiPPOMemory",
+    "MAPPOMemory",
+    "MultiMAPPOMemory",
 
     # utils
     "combine_subgraphs",

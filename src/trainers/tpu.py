@@ -33,7 +33,7 @@ def _launch_tpu_test_process(
             "-W",
             "ignore",
             "-m",
-            "utils.tpu_test_runner",
+            "src.utils.tpu_test_runner",
             "--batch",
             str(batch),
             "--seq-len",
@@ -71,13 +71,13 @@ def check_tpu_test_async():
     _TPU_TEST_PROCESS = None
 
     if returncode == 0:
-        print("[TPU test] finished successfully", flush=True)
+        # print("[TPU test] finished successfully", flush=True)
         return True
 
-    print("[TPU test] failed", flush=True)
+    # print("[TPU test] failed", flush=True)
 
-    if stderr:
-        print(stderr[-1000:], flush=True)
+    # if stderr:
+        # print(stderr[-1000:], flush=True)
 
     return False
 
@@ -105,8 +105,8 @@ def _tpu_monitor_loop(
             steps=steps,
         )
 
-        if started:
-            print("[TPU test] started", flush=True)
+        # if started:
+        #     print("[TPU test] started", flush=True)
 
         time.sleep(interval_seconds)
 

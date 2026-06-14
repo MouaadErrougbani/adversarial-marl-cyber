@@ -21,17 +21,19 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
     which action to take
     '''
     def __init__(self, in_dim, gamma=0.99, lmbda=0.95, clip=0.1, bs=5, epochs=6,
-                 a_kwargs=None, c_kwargs=None, training=True, concat_edges=False, agent_count=5, device="cpu"):
+                 a_kwargs=None, c_kwargs=None, training=True, concat_edges=False, num_agents=5, device="cpu", critic = None, actor = None):
         a_kwargs = a_kwargs or {}
         c_kwargs = c_kwargs or {}
-        super().__init__(in_dim, a_kwargs, c_kwargs, training, concat_edges, device=device)
+        super().__init__(in_dim, a_kwargs, c_kwargs, training, concat_edges, device=device, critic=critic, actor=actor)
+        self.external_actor  = actor is not None
+        self.external_critic  = critic is not None
 
-        self.memory = MultiPPOMemory(bs, agents=agent_count)
+        self.memory = MultiPPOMemory(batch_size=bs,num_agents=num_agents)
 
         self.args = (in_dim,)
         self.kwargs = dict(
             gamma=gamma, lmbda=lmbda, clip=clip, bs=bs, epochs=epochs,
-            a_kwargs=a_kwargs, c_kwargs=c_kwargs, training=training, concat_edges=concat_edges, device=device, agent_count=agent_count
+            a_kwargs=a_kwargs, c_kwargs=c_kwargs, training=training, concat_edges=concat_edges, device=device, num_agents=num_agents
         )
 
         # PPO Hyperparams
@@ -40,6 +42,7 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
         self.clip = clip
         self.bs = bs
         self.epochs = epochs
+        self._algorithm = "PPO"
 
         self.mse = nn.MSELoss()
 
@@ -48,6 +51,36 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
         Save an observation to the agent's memory buffer
         '''
         self.memory.remember(idx, s,a,v,p,r,t)
+
+    @torch.no_grad()
+    def get_action(self, obs, *args):
+        '''
+        Sample an action from the actor's distribution
+        given the current state. 
+
+        If eval(), only returns the action 
+        If train() returns action, value, and log prob 
+        '''
+        state,is_blocked = obs
+        if is_blocked:
+            return None
+        state = self._move_to_device(state)
+        distro = self.actor(*state)
+
+        # I don't know why this would ever be called
+        # during training, but just in case, putting the
+        # logic block outside the training check
+        if self.deterministic:
+            action = distro.probs.argmax()
+        else:
+            action = distro.sample()
+
+        if not self.training:
+            return action.item()
+
+        value = self.critic(*state)
+        prob = distro.log_prob(action)
+        return action.item(), value.item(), prob.item()
 
     def _compute_returns(self, rewards, terminals):
         returns = []
@@ -135,7 +168,6 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
             advantages = self._compute_advantages(returns, v)
 
             device = self.device
-
             for b_idx, b in enumerate(batches):
                 b = b.tolist()
 
@@ -243,4 +275,3 @@ def load(in_f, device="cpu"):
 
     agent.eval()
     return agent
-

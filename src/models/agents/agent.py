@@ -19,18 +19,21 @@ class InductiveGraphAgent(ABC):
     When training is complete, uses the InductiveActorNetwork to decide
     which action to take
     '''
-    def __init__(self, in_dim, a_kwargs=None, c_kwargs=None, training=True, concat_edges=False, device="cpu"):
+    def __init__(self, in_dim, a_kwargs=None, c_kwargs=None, training=True, concat_edges=False, device="cpu", critic = None, actor = None):
         a_kwargs = a_kwargs or {}
         c_kwargs = c_kwargs or {}
-
-        self.actor = InductiveActorNetwork(in_dim, concat_edges=concat_edges, **a_kwargs)
-        self.critic = InductiveCriticNetwork(in_dim, **c_kwargs)
+        
+        self.actor = actor or InductiveActorNetwork(in_dim, concat_edges=concat_edges, **a_kwargs)
+        self.critic = critic or InductiveCriticNetwork(in_dim, **c_kwargs)
+        self.external_actor  = None
+        self.external_critic  = None
         self.device = device
         self.actor.to(self.device)
         self.critic.to(self.device)
         self.memory = None
         self.kwargs = None
         self.args = None
+        self._algorithm = None
 
         self.training = training
         self.deterministic = False
@@ -85,8 +88,12 @@ class InductiveGraphAgent(ABC):
         '''
         Reset opt
         '''
-        self.actor.opt.zero_grad()
-        self.critic.opt.zero_grad()
+        if self.external_critic is None and self.external_actor is None:
+            raise ValueError("Cannot zero grad when both actor and critic are external")
+        if not self.external_actor :
+            self.actor.opt.zero_grad()
+        if not self.external_critic :
+            self.critic.opt.zero_grad()
 
     def _is_xla_device(self):
         return "xla" in str(self.device).lower()
@@ -99,17 +106,24 @@ class InductiveGraphAgent(ABC):
             xm.optimizer_step(self.critic.opt)
             xm.mark_step()
         else:
-            self.actor.opt.step()
-            self.critic.opt.step()
+            if self.external_actor is None and self.external_critic is None:
+                raise ValueError("Cannot step when both actor and critic are external")
+            if not self.external_actor :
+                self.actor.opt.step()
+            if not self.external_critic :
+                print("=="*20)
+                print("Critic : step")
+                print("=="*20)
+                self.critic.opt.step()
 
 
     def set_deterministic(self, val):
         self.deterministic = val
 
-    def set_mems(self, mems):
+    def set_memories(self, memories):
         if self.memory is None:
-            raise ValueError("Memory must be initialized before setting mems")
-        self.memory.mems = mems
+            raise ValueError("Memory must be initialized before setting memories")
+        self.memory.memories = memories
 
     def save(self, path='saved_models/agent.pt'):
         if self.kwargs is None:
@@ -123,43 +137,30 @@ class InductiveGraphAgent(ABC):
             'critic': self.critic.state_dict(),
             'agent': me
         }, path)
-
-    @torch.no_grad()
-    def get_action(self, obs, *args):
-        '''
-        Sample an action from the actor's distribution
-        given the current state. 
-
-        If eval(), only returns the action 
-        If train() returns action, value, and log prob 
-        '''
-        state,is_blocked = obs
-        if is_blocked:
-            return None
-        state = self._move_to_device(state)
-        distro = self.actor(*state)
-
-        # I don't know why this would ever be called
-        # during training, but just in case, putting the
-        # logic block outside the training check
-        if self.deterministic:
-            action = distro.probs.argmax()
-        else:
-            action = distro.sample()
-
-        if not self.training:
-            return action.item()
-
-        value = self.critic(*state)
-        prob = distro.log_prob(action)
-        return action.item(), value.item(), prob.item()
-
+        
     def load_weights(self, path):
         data = torch.load(path, map_location='cpu')
         self.actor.load_state_dict(data['actor'])
         self.critic.load_state_dict(data['critic'])
         self.to(self.device)
 
+    @property
+    def algorithm(self):
+        if self._algorithm is None:
+            raise ValueError(
+                "Algorithm not set for this agent"
+            )
+
+        return self._algorithm
+
+    @torch.no_grad()
+    @abstractmethod
+    def get_action(self, obs, *args):
+        """
+        Retourne une action à partir de l'observation courante.
+        """
+        pass
+    
     @abstractmethod
     def remember(self, *args):
         pass
