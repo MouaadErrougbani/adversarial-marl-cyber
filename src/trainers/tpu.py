@@ -122,39 +122,106 @@ def start_tpu_test_async(
     heads=16,
     steps=1,
 ):
-    global _TPU_TEST_PROCESS
+    from src.utils.tpu_test_runner import run
+    import threading
+    from types import SimpleNamespace
+    import os
+    import time
 
-    if _TPU_TEST_PROCESS is not None and _TPU_TEST_PROCESS.poll() is None:
-        return False
-
-    env = os.environ.copy()
-    env["PJRT_DEVICE"] = "TPU"
-
-    _TPU_TEST_PROCESS = subprocess.Popen(
-        [
-            sys.executable,
-            "-W",
-            "ignore",
-            "-m",
-            "src.utils.tpu_test_runner",
-            "--batch",
-            str(batch),
-            "--seq-len",
-            str(seq_len),
-            "--hidden",
-            str(hidden),
-            "--layers",
-            str(layers),
-            "--heads",
-            str(heads),
-            "--steps",
-            str(steps),
-        ],
-        env=env,
-        text=True,
+    args = SimpleNamespace(
+        batch=batch,
+        seq_len=seq_len,
+        hidden=hidden,
+        layers=layers,
+        heads=heads,
+        steps=steps,
     )
 
-    return True
+    print("[TPU test] Importing torch and torch_xla", flush=True)
+    import torch
+    import torch.nn as nn
+    import torch_xla.core.xla_model as xm
+    print("[TPU test] torch and torch_xla imported", flush=True)
+
+    device = xm.xla_device()
+    device_str = str(device)
+    print("[TPU test] Device tpu_test_runner : ", device_str, flush=True)
+
+
+    encoder_layer = nn.TransformerEncoderLayer(
+        d_model=args.hidden,
+        nhead=args.heads,
+        dim_feedforward=args.hidden * 4,
+        dropout=0.0,
+        batch_first=True,
+        activation="gelu",
+    )
+
+    model = nn.TransformerEncoder(
+        encoder_layer,
+        num_layers=args.layers,
+    ).to(device)
+
+    head = nn.Linear(args.hidden, args.hidden).to(device)
+
+    optimizer = torch.optim.AdamW(
+        list(model.parameters()) + list(head.parameters()),
+        lr=1e-4,
+    )
+
+    model.train()
+    head.train()
+
+    x = torch.randn(
+            args.batch,
+            args.seq_len,
+            args.hidden,
+            device=device,
+        )
+
+    target = torch.randn(
+            args.batch,
+            args.seq_len,
+            args.hidden,
+            device=device,
+        )
+
+    loss_fn = nn.MSELoss()
+
+        # Warmup
+    optimizer.zero_grad(set_to_none=True)
+    y = head(model(x))
+    loss = loss_fn(y, target)
+    loss.backward()
+    optimizer.step()
+    xm.mark_step()
+
+    _ = loss.detach().cpu().item()
+
+
+   
+    
+    while True:
+        try:
+            threading.Thread(
+                target=run,
+                args=(args, xm, optimizer, head, model, loss_fn, x, target),
+                daemon=True,
+            ).start()
+
+        except Exception as e:
+            print(
+                f"TPU test crashed: {e}",
+                flush=True
+            )
+
+        time.sleep(5 * 60)
+
+
+
+
+
+
 
 def check_tpu_test_async():
     """
