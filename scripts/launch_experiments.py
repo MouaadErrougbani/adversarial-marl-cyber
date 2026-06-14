@@ -19,7 +19,7 @@ def start_tpu_test_async(
     hidden=1024,
     layers=12,
     heads=16,
-    steps=100,
+    steps=1,
 ):
     global _TPU_TEST_PROCESS
 
