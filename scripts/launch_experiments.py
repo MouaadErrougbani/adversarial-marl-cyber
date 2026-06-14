@@ -11,6 +11,8 @@ import time
 #     stop_tpu_test_async,
 # )
 
+_TPU_TEST_PROCESS = None
+
 def start_tpu_test_async(
     batch=64,
     seq_len=512,
