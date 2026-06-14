@@ -111,9 +111,7 @@ class InductiveGraphAgent(ABC):
             if not self.external_actor :
                 self.actor.opt.step()
             if not self.external_critic :
-                print("=="*20)
-                print("Critic : step")
-                print("=="*20)
+               
                 self.critic.opt.step()
 
 

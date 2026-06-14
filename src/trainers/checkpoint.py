@@ -98,11 +98,6 @@ def load_checkpoints(
                 ckpt_path
             )
 
-            print(
-                f"[Checkpoint] "
-                f"Agent {i} loaded from "
-                f"{ckpt_path}"
-            )
 
         else:
 
@@ -110,7 +105,7 @@ def load_checkpoints(
                 f"[Checkpoint] "
                 f"Agent {i}: "
                 f"file not found "
-                f"({ckpt_path})"
+                f"({ckpt_path})", flush=True
             )
 
 def save_logs(
@@ -188,7 +183,7 @@ def load_logs(
                 print(
                     f"Warning: invalid log format in {log_path}. "
                     f"Expected list, got {type(loaded_log)}. "
-                    f"Starting with empty log."
+                    f"Starting with empty log.", flush=True
                 )
 
                 log = []
@@ -205,31 +200,35 @@ def load_logs(
                         print(
                             "Warning: old tuple log format detected. "
                             "It is recommended to start a new run "
-                            "or convert old logs before resuming."
+                            "or convert old logs before resuming.",
+                            flush=True
                         )
 
                     elif isinstance(first_entry, dict):
                         print(
-                            "New dict log format detected."
+                            "New dict log format detected.",
+                            flush=True
                         )
 
                     else:
                         print(
                             f"Warning: unknown log entry type: "
-                            f"{type(first_entry)}"
+                            f"{type(first_entry)}",
+                            flush=True
                         )
 
                 print(
                     f"Resume enabled: "
                     f"loaded log {log_path} "
                     f"(start_iter={start_iter})"
+                    , flush=True
                 )
 
         else:
 
             print(
                 f"Warning: log file not found: "
-                f"{log_path}"
+                f"{log_path}", flush=True
             )
 
     if override_start_iter is not None:
@@ -240,7 +239,7 @@ def load_logs(
 
         print(
             f"Resume override "
-            f"start_iter={start_iter}"
+            f"start_iter={start_iter}", flush=True
         )
 
     return log, start_iter

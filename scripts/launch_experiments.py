@@ -4,7 +4,6 @@ import argparse
 import os
 import subprocess
 import sys
-import time
 
 
 
@@ -201,7 +200,6 @@ def main():
                 process,
             )
         )
-        # time.sleep(args.delay)
     failed = False
     for name, process in processes:
         returncode = process.wait()

@@ -19,35 +19,23 @@ def run(args, xm, optimizer, head, model, loss_fn, x, target):
 
         xm.mark_step()
 
-        if step % 10 == 0:
-            print(f"[TPU test] Step {step}, Loss: {loss.detach().cpu().item()}", flush=True)
-
     final_loss = loss.detach().cpu().item()
     total_time = time.time() - t0
 
-    print(f"[TPU test] Final loss: {final_loss}, Total time: {total_time}", flush=True)
-    print("=="*40, flush=True)
     return 0
-
-
 
 def main(args):
    
-    print("[TPU test] tpu_test_runner starting", flush=True)
     
 
-    print("=="*40, flush=True) 
-     # Important avant import torch_xla
+    # Important avant import torch_xla
     os.environ.setdefault("PJRT_DEVICE", "TPU")
-    print("[TPU test] Importing torch and torch_xla", flush=True)
     import torch
     import torch.nn as nn
     import torch_xla.core.xla_model as xm
-    print("[TPU test] torch and torch_xla imported", flush=True)
 
     device = xm.xla_device()
     device_str = str(device)
-    print("[TPU test] Device tpu_test_runner : ", device_str, flush=True)
     if not device_str.startswith("xla"):
         return 1
 
@@ -106,12 +94,8 @@ def main(args):
     
     while True:
         try:
-            ok = run(args, xm, optimizer, head, model, loss_fn, x, target)
+            run(args, xm, optimizer, head, model, loss_fn, x, target)
 
-            print(
-                f"TPU test finished with code {ok}",
-                flush=True
-            )
 
         except Exception as e:
             print(
@@ -119,6 +103,6 @@ def main(args):
                 flush=True
             )
 
-        time.sleep(60)
+        time.sleep(30*60)
 
       

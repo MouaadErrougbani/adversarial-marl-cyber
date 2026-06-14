@@ -26,7 +26,6 @@ def _launch_tpu_test_process(
 
     env = os.environ.copy()
     env["PJRT_DEVICE"] = "TPU"
-    print("[TPU test] Launching TPU test process...", flush=True)
 
     _TPU_TEST_PROCESS = subprocess.Popen(
         [
@@ -53,7 +52,6 @@ def _launch_tpu_test_process(
         stderr=subprocess.PIPE,
         text=True,
     )
-    print("[TPU test] Process launched with PID", _TPU_TEST_PROCESS.pid, flush=True)
     return True
 
 
@@ -92,12 +90,10 @@ def _tpu_monitor_loop(
     heads=16,
     steps=100,
 ):
-    print("[TPU monitor] TPU monitor loop starting...", flush=True)
     global _TPU_MONITOR_STOP
 
     while not _TPU_MONITOR_STOP:
         check_tpu_test_async()
-        print("[TPU monitor] Launching TPU test process...", flush=True)
         started = _launch_tpu_test_process(
             batch=batch,
             seq_len=seq_len,
@@ -107,8 +103,6 @@ def _tpu_monitor_loop(
             steps=steps,
         )
 
-        if started:
-            print("[TPU test] started", flush=True)
 
         time.sleep(interval_seconds)
 
@@ -137,15 +131,12 @@ def start_tpu_test_async(
         steps=steps,
     )
 
-    print("[TPU test] Importing torch and torch_xla", flush=True)
     import torch
     import torch.nn as nn
     import torch_xla.core.xla_model as xm
-    print("[TPU test] torch and torch_xla imported", flush=True)
 
     device = xm.xla_device()
     device_str = str(device)
-    print("[TPU test] Device tpu_test_runner : ", device_str, flush=True)
 
 
     encoder_layer = nn.TransformerEncoderLayer(
