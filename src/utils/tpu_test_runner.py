@@ -4,11 +4,35 @@ import os
 import time
 import argparse
 
+def run(args, xm, optimizer, head, model, loss_fn, x, target):
+
+    t0 = time.time()
+
+    for step in range(args.steps):
+        optimizer.zero_grad(set_to_none=True)
+
+        y = head(model(x))
+        loss = loss_fn(y, target)
+
+        loss.backward()
+        optimizer.step()
+
+        xm.mark_step()
+
+        if step % 10 == 0:
+            print(f"[TPU test] Step {step}, Loss: {loss.detach().cpu().item()}", flush=True)
+
+    final_loss = loss.detach().cpu().item()
+    total_time = time.time() - t0
+
+    print(f"[TPU test] Final loss: {final_loss}, Total time: {total_time}", flush=True)
+    print("=="*40, flush=True)
+    return 0
+
+
 
 def main():
-
-    print("[TPU test] tpu_test_runner starting", flush=True)
-    print("[TPU test] tpu_test_runner starting", flush=True)
+   
     print("[TPU test] tpu_test_runner starting", flush=True)
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch", type=int, default=64)
@@ -19,7 +43,8 @@ def main():
     parser.add_argument("--steps", type=int, default=100)
     args = parser.parse_args()
 
-    # Important avant import torch_xla
+    print("=="*40, flush=True) 
+     # Important avant import torch_xla
     os.environ.setdefault("PJRT_DEVICE", "TPU")
     print("[TPU test] Importing torch and torch_xla", flush=True)
     import torch
@@ -83,27 +108,27 @@ def main():
 
     _ = loss.detach().cpu().item()
 
-    t0 = time.time()
 
-    for step in range(args.steps):
-        optimizer.zero_grad(set_to_none=True)
+   
+    
+    while True:
+        try:
+            ok = run(args, xm, optimizer, head, model, loss_fn, x, target)
 
-        y = head(model(x))
-        loss = loss_fn(y, target)
+            print(
+                f"TPU test finished with code {ok}",
+                flush=True
+            )
 
-        loss.backward()
-        optimizer.step()
+        except Exception as e:
+            print(
+                f"TPU test crashed: {e}",
+                flush=True
+            )
 
-        xm.mark_step()
+        time.sleep(5 * 60)
 
-        if step % 10 == 0:
-            print(f"[TPU test] Step {step}, Loss: {loss.detach().cpu().item()}", flush=True)
-
-    final_loss = loss.detach().cpu().item()
-    total_time = time.time() - t0
-
-    print(f"[TPU test] Final loss: {final_loss}, Total time: {total_time}", flush=True)
-    return 0
+      
 
 
 if __name__ == "__main__":

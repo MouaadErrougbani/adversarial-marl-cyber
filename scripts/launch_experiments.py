@@ -6,85 +6,10 @@ import subprocess
 import sys
 import time
 
-# from src.trainers.tpu import (
-#     start_tpu_test_async,
-#     stop_tpu_test_async,
-# )
-
-_TPU_TEST_PROCESS = None
-
-def start_tpu_test_async(
-    batch=64,
-    seq_len=512,
-    hidden=1024,
-    layers=12,
-    heads=16,
-    steps=1,
-):
-    global _TPU_TEST_PROCESS
-
-    if _TPU_TEST_PROCESS is not None and _TPU_TEST_PROCESS.poll() is None:
-        return False
-
-    env = os.environ.copy()
-    env["PJRT_DEVICE"] = "TPU"
-
-    _TPU_TEST_PROCESS = subprocess.Popen(
-        [
-            sys.executable,
-            "-W",
-            "ignore",
-            "-m",
-            "src.utils.tpu_test_runner",
-            "--batch",
-            str(batch),
-            "--seq-len",
-            str(seq_len),
-            "--hidden",
-            str(hidden),
-            "--layers",
-            str(layers),
-            "--heads",
-            str(heads),
-            "--steps",
-            str(steps),
-        ],
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-
-    return True
-
-def check_tpu_test_async():
-    """
-    Vérifie si le TPU test est terminé.
-    Ne bloque pas le training.
-    """
-
-    global _TPU_TEST_PROCESS
-
-    if _TPU_TEST_PROCESS is None:
-        return None
-
-    # مازال خدام
-    if _TPU_TEST_PROCESS.poll() is None:
-        return None
-
-    stdout, stderr = _TPU_TEST_PROCESS.communicate()
-    returncode = _TPU_TEST_PROCESS.returncode
-
-    _TPU_TEST_PROCESS = None
-
-  
-    if returncode == 0:
-        return True
-
-    if stderr and "Device or resource busy" in stderr:
-        return False
-
-    return False
+from src.trainers.tpu import (
+    start_tpu_test_async,
+    check_tpu_test_async,
+)
 
 
 
@@ -96,27 +21,22 @@ ALL_EXPERIMENTS = [
         "critic": "gnn_gcn",
     },
     {
-        "name": "mappo_gcn_gcn",
-        "algorithm": "mappo",
-        "actor": "gnn_gcn",
-        "critic": "gnn_gcn",
-    },
-    {
         "name": "ppo_gat_gat",
         "algorithm": "ppo",
         "actor": "gnn_gat",
         "critic": "gnn_gat",
     },
     {
-        "name": "ppo_gat_gcn",
-        "algorithm": "ppo",
-        "actor": "gnn_gat",
+        "name": "mappo_gcn_gcn",
+        "algorithm": "mappo",
+        "actor": "gnn_gcn",
         "critic": "gnn_gcn",
     },
+    
     {
-        "name": "ppo_gcn_gat",
-        "algorithm": "ppo",
-        "actor": "gnn_gcn",
+        "name": "mappo_gat_gat",
+        "algorithm": "mappo",
+        "actor": "gnn_gat",
         "critic": "gnn_gat",
     },
 ]
@@ -265,7 +185,7 @@ def main():
     processes = []
     tpu_monitor_started = False
 
-    check_tpu_test_async()
+    
     start_tpu_test_async(
             batch=64,
             seq_len=512,
@@ -274,6 +194,7 @@ def main():
             heads=16,
             steps=100,
         )
+    
     
     import time 
 
