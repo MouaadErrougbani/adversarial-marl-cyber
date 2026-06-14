@@ -7,7 +7,7 @@ import argparse
 
 def main():
 
-    print("[TPU test] starting", flush=True)
+    print("[TPU test] tpu_test_runner starting", flush=True)
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch", type=int, default=64)
     parser.add_argument("--seq-len", type=int, default=512)
@@ -27,7 +27,7 @@ def main():
 
     device = xm.xla_device()
     device_str = str(device)
-
+    print("[TPU test] Device tpu_test_runner : ", device_str, flush=True)
     if not device_str.startswith("xla"):
         return 1
 

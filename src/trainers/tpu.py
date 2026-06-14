@@ -26,6 +26,7 @@ def _launch_tpu_test_process(
 
     env = os.environ.copy()
     env["PJRT_DEVICE"] = "TPU"
+    print("[TPU test] Launching TPU test process...", flush=True)
 
     _TPU_TEST_PROCESS = subprocess.Popen(
         [
@@ -52,7 +53,7 @@ def _launch_tpu_test_process(
         stderr=subprocess.PIPE,
         text=True,
     )
-
+    print("[TPU test] Process launched with PID", _TPU_TEST_PROCESS.pid, flush=True)
     return True
 
 
@@ -91,11 +92,12 @@ def _tpu_monitor_loop(
     heads=16,
     steps=100,
 ):
+    print("[TPU monitor] TPU monitor loop starting...", flush=True)
     global _TPU_MONITOR_STOP
 
     while not _TPU_MONITOR_STOP:
         check_tpu_test_async()
-
+        print("[TPU monitor] Launching TPU test process...", flush=True)
         started = _launch_tpu_test_process(
             batch=batch,
             seq_len=seq_len,
@@ -105,8 +107,8 @@ def _tpu_monitor_loop(
             steps=steps,
         )
 
-        # if started:
-        #     print("[TPU test] started", flush=True)
+        if started:
+            print("[TPU test] started", flush=True)
 
         time.sleep(interval_seconds)
 
@@ -120,6 +122,7 @@ def start_tpu_test_async(
     heads=16,
     steps=100,
 ):
+    print("[TPU monitor] Starting TPU monitor thread...", flush=True)
     """
     Starts one background monitor thread.
     The thread launches a TPU test every interval_seconds.
@@ -146,6 +149,7 @@ def start_tpu_test_async(
         ),
         daemon=True,
     )
+    print("[TPU monitor] Starting thread...", flush=True)
 
     _TPU_MONITOR_THREAD.start()
     return True

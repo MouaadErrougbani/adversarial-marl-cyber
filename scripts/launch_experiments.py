@@ -191,6 +191,7 @@ def main():
     tpu_monitor_started = False
 
     if True:
+        print("Starting TPU monitor thread...", flush=True)
         tpu_monitor_started = start_tpu_test_async(
             interval_seconds=30 * 60,
             batch=64,
@@ -200,6 +201,7 @@ def main():
             heads=16,
             steps=100,
         )
+        print("TPU monitor thread started.", flush=True)
 
 
     try:
