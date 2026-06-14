@@ -6,10 +6,6 @@ import subprocess
 import sys
 import time
 
-from src.trainers.tpu import (
-    start_tpu_test_async,
-    check_tpu_test_async,
-)
 
 
 
@@ -186,15 +182,7 @@ def main():
     tpu_monitor_started = False
 
     
-    start_tpu_test_async(
-            batch=64,
-            seq_len=512,
-            hidden=1024,
-            layers=12,
-            heads=16,
-            steps=100,
-        )
-    
+
     
     import time 
 

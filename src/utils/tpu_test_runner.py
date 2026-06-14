@@ -119,6 +119,6 @@ def main(args):
                 flush=True
             )
 
-        time.sleep(5 * 60)
+        time.sleep(60)
 
       
