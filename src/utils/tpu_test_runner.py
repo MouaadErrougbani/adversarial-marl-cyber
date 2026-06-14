@@ -8,6 +8,8 @@ import argparse
 def main():
 
     print("[TPU test] tpu_test_runner starting", flush=True)
+    print("[TPU test] tpu_test_runner starting", flush=True)
+    print("[TPU test] tpu_test_runner starting", flush=True)
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch", type=int, default=64)
     parser.add_argument("--seq-len", type=int, default=512)
