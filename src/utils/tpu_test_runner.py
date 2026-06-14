@@ -31,17 +31,10 @@ def run(args, xm, optimizer, head, model, loss_fn, x, target):
 
 
 
-def main():
+def main(args):
    
     print("[TPU test] tpu_test_runner starting", flush=True)
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--batch", type=int, default=64)
-    parser.add_argument("--seq-len", type=int, default=512)
-    parser.add_argument("--hidden", type=int, default=1024)
-    parser.add_argument("--layers", type=int, default=12)
-    parser.add_argument("--heads", type=int, default=16)
-    parser.add_argument("--steps", type=int, default=100)
-    args = parser.parse_args()
+    
 
     print("=="*40, flush=True) 
      # Important avant import torch_xla
