@@ -190,70 +190,72 @@ def main():
     processes = []
     tpu_monitor_started = False
 
-    if True:
-        print("Starting TPU monitor thread...", flush=True)
-        tpu_monitor_started = start_tpu_test_async(
-            interval_seconds=30 * 60,
-            batch=64,
-            seq_len=512,
-            hidden=1024,
-            layers=12,
-            heads=16,
-            steps=100,
-        )
-        print("TPU monitor thread started.", flush=True)
+    import threading
+
+    from src.utils.tpu_test_runner import main
+
+    thread = threading.Thread(
+        target=main,
+        daemon=True
+    )
+
+    thread.start()
+
+    print("TPU test running...")
+
+    thread.join()
 
 
-    try:
-        for exp in selected_experiments:
-            cmd = build_command(
-                exp=exp,
-                workers=args.workers,
-                max_threads=args.max_threads,
-                training_episodes=args.training_episodes,
-                batch_size=args.batch_size,
-                epochs=args.epochs,
-            )
+    # try:
+    #     for exp in selected_experiments:
+    #         cmd = build_command(
+    #             exp=exp,
+    #             workers=args.workers,
+    #             max_threads=args.max_threads,
+    #             training_episodes=args.training_episodes,
+    #             batch_size=args.batch_size,
+    #             epochs=args.epochs,
+    #         )
 
 
-            process = subprocess.Popen(
-                cmd,
-                env=os.environ.copy(),
-            )
+    #         process = subprocess.Popen(
+    #             cmd,
+    #             env=os.environ.copy(),
+    #         )
 
-            processes.append(
-                (
-                    exp["name"],
-                    process,
-                )
-            )
+    #         processes.append(
+    #             (
+    #                 exp["name"],
+    #                 process,
+    #             )
+    #         )
 
-            time.sleep(args.delay)
+    #         time.sleep(args.delay)
 
 
-        failed = False
+    #     failed = False
 
-        for name, process in processes:
-            returncode = process.wait()
+    #     for name, process in processes:
+    #         returncode = process.wait()
 
-            if returncode == 0:
-                print(
-                    f"✅ {name} finished successfully",
-                    flush=True,
-                )
-            else:
-                failed = True
-                print(
-                    f"❌ {name} failed with returncode {returncode}",
-                    flush=True,
-                )
+    #         if returncode == 0:
+    #             print(
+    #                 f"✅ {name} finished successfully",
+    #                 flush=True,
+    #             )
+    #         else:
+    #             failed = True
+    #             print(
+    #                 f"❌ {name} failed with returncode {returncode}",
+    #                 flush=True,
+    #             )
 
-        if failed:
-            raise SystemExit(1)
-
-    finally:
-        if tpu_monitor_started:
-            stop_tpu_test_async()
+    #     if failed:
+    #         raise SystemExit(1)
+    #     pass
+    # finally:
+    #     if tpu_monitor_started:
+    #         stop_tpu_test_async()
 
 
 if __name__ == "__main__":
