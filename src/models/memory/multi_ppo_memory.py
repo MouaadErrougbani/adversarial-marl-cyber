@@ -73,20 +73,20 @@ class MultiPPOMemory(MultiMemory):
             all_rewards += memory.rewards
             all_terminals += memory.terminals
 
-            cnt = len(memory.states)
+            # cnt = len(memory.states)
 
-            idx = torch.randperm(cnt) + offset 
-            batch_indices += list(idx.split(self.batch_size))
-            offset += cnt
+            # idx = torch.randperm(cnt) + offset 
+            # batch_indices += list(idx.split(self.batch_size))
+            # offset += cnt
 
-        # # 2) Nombre total de samples
-        # total_samples = len(all_actions)
+        # 2) Nombre total de samples
+        total_samples = len(all_actions)
 
-        # # 3) Shuffle global
-        # global_indices = torch.randperm(total_samples)
+        # 3) Shuffle global
+        global_indices = torch.randperm(total_samples)
 
-        # # 4) Mini-batches globaux
-        # batch_indices = global_indices.split(self.batch_size)
+        # 4) Mini-batches globaux
+        batch_indices = global_indices.split(self.batch_size)
         return (
             all_states,
             all_actions,

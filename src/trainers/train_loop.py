@@ -67,10 +67,7 @@ def train_loop(
         #
 
         collection_start = time.perf_counter()
-        print(
-            "Collecting rollout data...",
-            flush=True,
-        )
+
         rollout_data = collect_data(
             agents,
             envs,
@@ -78,11 +75,6 @@ def train_loop(
             num_agents,
             max_threads,
         )
-        print(
-            "Rollout data collection finished.",
-            flush=True,
-        )
-
 
         collection_end = time.perf_counter()
         collection_time_sec = collection_end - collection_start
@@ -106,16 +98,9 @@ def train_loop(
         #
 
         training_start = time.perf_counter()
-        print(
-            "Training models...",
-            flush=True,
-        )
+       
         losses = train_models(
             agents
-        )
-        print(
-            "Model training finished.",
-            flush=True,
         )
 
         training_end = time.perf_counter()
