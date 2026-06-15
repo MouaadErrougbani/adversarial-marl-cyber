@@ -19,7 +19,7 @@ class InductiveGraphAgent(ABC):
     When training is complete, uses the InductiveActorNetwork to decide
     which action to take
     '''
-    def __init__(self, in_dim, a_kwargs=None, c_kwargs=None, training=True, concat_edges=False, device="cpu", critic = None, actor = None):
+    def __init__(self, in_dim, a_kwargs=None, c_kwargs=None, training=True, concat_edges=False, critic = None, actor = None):
         a_kwargs = a_kwargs or {}
         c_kwargs = c_kwargs or {}
         
@@ -27,7 +27,6 @@ class InductiveGraphAgent(ABC):
         self.critic = critic or InductiveCriticNetwork(in_dim, **c_kwargs)
         self.external_actor  = None
         self.external_critic  = None
-        self.device = device
         self.memory = None
         self.kwargs = None
         self.args = None
@@ -36,27 +35,9 @@ class InductiveGraphAgent(ABC):
         self.training = training
         self.deterministic = False
     
-    def to(self, device):
-        self.device = device
-        self.actor.to(device)
-        self.critic.to(device)
-        return self
 
 
-    def _move_to_device(self, data):
-        if torch.is_tensor(data):
-            return data.to(self.device)
 
-        if isinstance(data, tuple):
-            return tuple(self._move_to_device(x) for x in data)
-
-        if isinstance(data, list):
-            return [self._move_to_device(x) for x in data]
-
-        if isinstance(data, dict):
-            return {k: self._move_to_device(v) for k, v in data.items()}
-
-        return data
 
     # Required by CAGE but not utilized
     def end_episode(self):
@@ -92,9 +73,6 @@ class InductiveGraphAgent(ABC):
             self.actor.opt.zero_grad()
         if not self.external_critic :
             self.critic.opt.zero_grad()
-
-    def _is_xla_device(self):
-        return "xla" in str(self.device).lower()
 
 
     def _step(self):
@@ -132,7 +110,7 @@ class InductiveGraphAgent(ABC):
         data = torch.load(path, map_location='cpu')
         self.actor.load_state_dict(data['actor'])
         self.critic.load_state_dict(data['critic'])
-        self.to(self.device)
+        
 
     @property
     def algorithm(self):

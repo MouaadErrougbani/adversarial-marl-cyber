@@ -39,7 +39,6 @@ class InductiveGraphMAPPOAgent(
         training=True,
         concat_edges=False,
         num_agents=5,
-        device="cpu",
         actor=None,
         critic=None,
     ):
@@ -61,7 +60,6 @@ class InductiveGraphMAPPOAgent(
             training=training,
             concat_edges=concat_edges,
             num_agents=num_agents,
-            device=device,
             actor=actor,
             critic=c,
         )

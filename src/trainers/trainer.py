@@ -24,7 +24,7 @@ from .train_loop import (
 
 
 
-def run_train(cfg, device = "cpu"):
+def run_train(cfg):
     """
     Main training entrypoint.
     """
@@ -143,10 +143,6 @@ def run_train(cfg, device = "cpu"):
     print(
         f"Run name: "
         f"{hp.fnames}", flush=True
-    )
-
-    print(
-        f"Training device: {device}", flush=True
     )
 
     print("=" * 80, flush=True)

@@ -28,7 +28,6 @@ def train_loop(
     log_dir,
     checkpoint_dir,
     max_threads,
-    device="cpu",
 ):
     """
     Main PPO training loop.

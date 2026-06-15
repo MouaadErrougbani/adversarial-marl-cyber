@@ -21,10 +21,10 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
     which action to take
     '''
     def __init__(self, in_dim, gamma=0.99, lmbda=0.95, clip=0.1, bs=5, epochs=6,
-                 a_kwargs=None, c_kwargs=None, training=True, concat_edges=False, num_agents=5, device="cpu", critic = None, actor = None):
+                 a_kwargs=None, c_kwargs=None, training=True, concat_edges=False, num_agents=5, critic = None, actor = None):
         a_kwargs = a_kwargs or {}
         c_kwargs = c_kwargs or {}
-        super().__init__(in_dim, a_kwargs, c_kwargs, training, concat_edges, device=device, critic=critic, actor=actor)
+        super().__init__(in_dim, a_kwargs, c_kwargs, training, concat_edges, critic=critic, actor=actor)
         self.external_actor  = actor is not None
         self.external_critic  = critic is not None
 
@@ -33,7 +33,7 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
         self.args = (in_dim,)
         self.kwargs = dict(
             gamma=gamma, lmbda=lmbda, clip=clip, bs=bs, epochs=epochs,
-            a_kwargs=a_kwargs, c_kwargs=c_kwargs, training=training, concat_edges=concat_edges, device=device, num_agents=num_agents
+            a_kwargs=a_kwargs, c_kwargs=c_kwargs, training=training, concat_edges=concat_edges, num_agents=num_agents
         )
 
         # PPO Hyperparams

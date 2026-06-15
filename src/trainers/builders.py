@@ -8,7 +8,7 @@ from src import (
 )
 
 
-def build_agents(cfg, device = "cpu"):
+def build_agents(cfg):
     """
     Build agents.
     """
@@ -34,7 +34,6 @@ def build_agents(cfg, device = "cpu"):
                     bs=cfg["train"]["batch_size"],
                     epochs=cfg["train"]["epochs"],
                     num_agents=num_agents,
-                    device=device,
                     **cfg.get("hyperparams", {})
                 )
                 for _ in range(num_agents)
@@ -52,7 +51,6 @@ def build_agents(cfg, device = "cpu"):
                         bs=cfg["train"]["batch_size"],
                         epochs=cfg["train"]["epochs"],
                         num_agents=num_agents,
-                        device=device,
                         critic=shared_critic,
                         **cfg.get("hyperparams", {})
                     )
@@ -65,7 +63,6 @@ def build_agents(cfg, device = "cpu"):
                         bs=cfg["train"]["batch_size"],
                         epochs=cfg["train"]["epochs"],
                         num_agents=num_agents,
-                        device=device,
                         **cfg.get("hyperparams", {})
                     )
                     shared_critic = agent.critic
