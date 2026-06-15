@@ -14,6 +14,9 @@ from src.models.utils import (
 from src.models.agents.agent import InductiveGraphAgent
 
 
+import time
+
+
 class InductiveGraphPPOAgent(InductiveGraphAgent):
     '''
     Class to manage agents' memories and learning (when training)
@@ -171,13 +174,17 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
 
                 s_ = [s[idx] for idx in b]
                 a_ = [a[idx] for idx in b]
-
+                t0 = time.perf_counter()
                 batched_states = combine_marl_states(s_)
+                t1 = time.perf_counter()
 
                 self._zero_grad()
 
                 dist = self.actor(*batched_states)
+                t2 = time.perf_counter()
+
                 critic_vals = self.critic(*batched_states)
+                t3 = time.perf_counter()
 
                 actions = torch.tensor(
                     a_,
@@ -216,6 +223,7 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                 )
 
                 total_loss.backward()
+                t4 = time.perf_counter()
                 self._step()
 
                 total_loss_sum += float(
@@ -240,6 +248,14 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                         f"E-loss: {-entropy_loss.item() * 0.01:0.4f}",
                         flush=True,
                     )
+        
+        print(
+            f"combine={t1-t0:.3f}s "
+            f"actor={t2-t1:.3f}s "
+            f"critic={t3-t2:.3f}s "
+            f"backward={t4-t3:.3f}s",
+            flush=True,
+        )
 
         self.memory.clear()
 
@@ -255,6 +271,18 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
             "actor_loss": actor_loss_sum / update_count,
             "critic_loss": critic_loss_sum / update_count,
         }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def load(in_f, device="cpu"):
