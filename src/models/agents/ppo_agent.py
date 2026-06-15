@@ -144,7 +144,6 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
         return total_loss
 
     def learn(self, verbose=False):
-        print("Learn", flush=True)
         """
         Runs the PPO update algorithm on memories stored in self.memory.
 
@@ -164,13 +163,10 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
 
         for e in range(self.epochs):
             s, a, v, p, r, t, batches = self.memory.get_batches()
-            print("Epoch", e, flush=True)
             returns = self._compute_returns(r, t)
             advantages = self._compute_advantages(returns, v)
 
-            device = self.device
             for b_idx, b in enumerate(batches):
-                print("Batch", b_idx, flush=True)
                 b = b.tolist()
 
                 s_ = [s[idx] for idx in b]
@@ -187,7 +183,6 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                 actions = torch.tensor(
                     a_,
                     dtype=torch.long,
-                    device=device,
                 )
 
                 new_log_probs = dist.log_prob(actions)
@@ -195,11 +190,10 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                 old_log_probs = torch.tensor(
                     [p[i] for i in b],
                     dtype=torch.float32,
-                    device=device,
                 )
 
-                a_t = advantages[b].to(device)
-                batch_returns = returns[b].to(device)
+                a_t = advantages[b]
+                batch_returns = returns[b]
 
                 actor_loss = self._compute_actor_loss(
                     new_log_probs=new_log_probs,
@@ -207,23 +201,19 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                     advantages=a_t,
                 )
 
-                print("Actor loss computed", flush=True)
 
                 critic_loss = self._compute_critic_loss(
                     critic_values=critic_vals,
                     returns=batch_returns,
                 )
-                print("Critic loss computed", flush=True)
                 entropy_loss = self._compute_entropy_loss(
                     dist
                 )
-                print("Entropy loss computed", flush=True)
                 total_loss = self._compute_total_loss(
                     actor_loss=actor_loss,
                     critic_loss=critic_loss,
                     entropy_loss=entropy_loss,
                 )
-                print("Total loss computed", flush=True)
                 total_loss.backward()
                 self._step()
 
@@ -264,7 +254,6 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
             "actor_loss": actor_loss_sum / update_count,
             "critic_loss": critic_loss_sum / update_count,
         }
-
 
 def load(in_f, device="cpu"):
     data = torch.load(in_f, map_location="cpu")
