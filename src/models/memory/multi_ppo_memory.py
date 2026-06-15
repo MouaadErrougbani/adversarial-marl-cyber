@@ -29,7 +29,8 @@ class MultiPPOMemory(MultiMemory):
         """
         for mem in self.memories:
             mem.clear()
-
+    """
+    
     def get_batches(self): 
         offset = 0
         idxs = []
@@ -51,9 +52,11 @@ class MultiPPOMemory(MultiMemory):
             offset += cnt 
 
         return all_s, all_a, all_v, all_p, all_r, all_t, idxs
+    """
         
     def get_batches(self):
         offset = 0
+        batch_indices = []
         all_states = []
         all_actions = []
         all_values = []
