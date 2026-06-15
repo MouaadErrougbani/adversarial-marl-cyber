@@ -144,6 +144,7 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
         return total_loss
 
     def learn(self, verbose=False):
+        print("Learn", flush=True)
         """
         Runs the PPO update algorithm on memories stored in self.memory.
 
@@ -163,7 +164,7 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
 
         for e in range(self.epochs):
             s, a, v, p, r, t, batches = self.memory.get_batches()
-
+            print("Epoch", e, flush=True)
             returns = self._compute_returns(r, t)
             advantages = self._compute_advantages(returns, v)
 
