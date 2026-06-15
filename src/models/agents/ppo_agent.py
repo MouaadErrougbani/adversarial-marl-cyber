@@ -249,13 +249,13 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                         flush=True,
                     )
         
-        print(
-            f"combine={t1-t0:.3f}s "
-            f"actor={t2-t1:.3f}s "
-            f"critic={t3-t2:.3f}s "
-            f"backward={t4-t3:.3f}s",
-            flush=True,
-        )
+                    print(
+                        f"combine={t1-t0:.3f}s "
+                        f"actor={t2-t1:.3f}s "
+                        f"critic={t3-t2:.3f}s "
+                        f"backward={t4-t3:.3f}s",
+                        flush=True,
+                    )
 
         self.memory.clear()
 
