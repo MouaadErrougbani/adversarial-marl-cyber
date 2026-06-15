@@ -2,14 +2,14 @@ paths:
   logs: logs
   checkpoints: checkpoints
 runtime:
-  max_threads: 50
+  max_threads: 40
   max_training_hours: 11.1
 train:
   algorithm: mappo # PPO, MAPPO
   seed: 42
   episode_len: 500
-  episodes_per_update: 25
-  workers: 25
+  episodes_per_update: 20
+  workers: 20
   batch_size: 2500
   training_episodes: 50000
   epochs: 4
