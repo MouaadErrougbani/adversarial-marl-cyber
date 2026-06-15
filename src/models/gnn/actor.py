@@ -85,7 +85,6 @@ class InductiveActorNetwork(nn.Module):
             rtrs.size(0),
             9,
             1,
-            device=rtrs.device
         )
 
         return rtrs, rtr_mask

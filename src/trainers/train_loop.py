@@ -28,7 +28,6 @@ def train_loop(
     log_dir,
     checkpoint_dir,
     max_threads,
-    device="cpu",
 ):
     """
     Main PPO training loop.
@@ -36,18 +35,7 @@ def train_loop(
     for agent in agents:
         agent.train()
 
-    device_str = str(device).lower()
 
-    if "cpu" in device_str:
-        rollout_agents = agents
-    else:
-        rollout_agents = [
-            copy.deepcopy(agent).to("cpu")
-            for agent in agents
-        ]
-
-    for agent in rollout_agents:
-        agent.train()
 
     num_agents = len(agents)
 
@@ -80,7 +68,7 @@ def train_loop(
         collection_start = time.perf_counter()
 
         rollout_data = collect_data(
-            rollout_agents,
+            agents,
             envs,
             hp,
             num_agents,
@@ -122,22 +110,6 @@ def train_loop(
         # Sync rollout agents only if training is not CPU
         #
 
-        if "cpu" not in device_str:
-            for rollout_agent, train_agent in zip(rollout_agents, agents):
-                actor_state = {
-                    k: v.detach().cpu()
-                    for k, v in train_agent.actor.state_dict().items()
-                }
-
-                critic_state = {
-                    k: v.detach().cpu()
-                    for k, v in train_agent.critic.state_dict().items()
-                }
-
-                rollout_agent.actor.load_state_dict(actor_state)
-                rollout_agent.critic.load_state_dict(critic_state)
-                rollout_agent.to("cpu")
-                rollout_agent.train()
 
         #
         # Metrics: rewards

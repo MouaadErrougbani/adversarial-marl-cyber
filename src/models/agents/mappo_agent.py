@@ -39,7 +39,6 @@ class InductiveGraphMAPPOAgent(
         training=True,
         concat_edges=False,
         num_agents=5,
-        device="cpu",
         actor=None,
         critic=None,
     ):
@@ -61,7 +60,6 @@ class InductiveGraphMAPPOAgent(
             training=training,
             concat_edges=concat_edges,
             num_agents=num_agents,
-            device=device,
             actor=actor,
             critic=c,
         )
@@ -116,13 +114,6 @@ class InductiveGraphMAPPOAgent(
         if is_blocked:
             return None
 
-        local_observation = self._move_to_device(
-            local_observation
-        )
-
-        global_observation = self._move_to_device(
-            global_observation
-        )
 
         distro = self.actor(
             *local_observation
@@ -170,7 +161,6 @@ class InductiveGraphMAPPOAgent(
             returns = self._compute_returns(r, t)
             advantages = self._compute_advantages(returns, v)
 
-            device = self.device
 
             for b in batches:
                 b = b.tolist()
@@ -180,21 +170,18 @@ class InductiveGraphMAPPOAgent(
                 a_ = [a[idx] for idx in b]
 
                 batched_states = combine_marl_states(s_)
-                batched_states = self._move_to_device(batched_states)
 
-                batch_returns = returns[b].to(device)
-                a_t = advantages[b].to(device)
+                batch_returns = returns[b]
+                a_t = advantages[b]
 
                 actions = torch.tensor(
                     a_,
                     dtype=torch.long,
-                    device=device,
                 )
 
                 old_log_probs = torch.tensor(
                     [p[idx] for idx in b],
                     dtype=torch.float32,
-                    device=device,
                 )
 
                 self._zero_grad()
@@ -215,7 +202,6 @@ class InductiveGraphMAPPOAgent(
                     critic_vals = []
 
                     for global_state in g_:
-                        global_state = self._move_to_device(global_state)
                         critic_vals.append(
                             self.critic(global_state)
                         )
@@ -240,7 +226,6 @@ class InductiveGraphMAPPOAgent(
                     critic_loss = torch.tensor(
                         0.0,
                         dtype=torch.float32,
-                        device=device,
                     )
 
                     total_loss = (

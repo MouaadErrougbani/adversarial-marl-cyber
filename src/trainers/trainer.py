@@ -24,7 +24,7 @@ from .train_loop import (
 
 
 
-def run_train(cfg, device = "cpu"):
+def run_train(cfg):
     """
     Main training entrypoint.
     """
@@ -72,7 +72,6 @@ def run_train(cfg, device = "cpu"):
 
     agents = build_agents(
         cfg,
-        device=device,
     )
 
     #
@@ -146,10 +145,6 @@ def run_train(cfg, device = "cpu"):
         f"{hp.fnames}", flush=True
     )
 
-    print(
-        f"Training device: {device}", flush=True
-    )
-
     print("=" * 80, flush=True)
 
     #
@@ -166,5 +161,4 @@ def run_train(cfg, device = "cpu"):
         log_dir=log_dir,
         checkpoint_dir=checkpoint_dir,
         max_threads=max_threads,
-        device=device,
     )
