@@ -6,18 +6,21 @@ MAX_USERS = 10
 
 
 def pad_sequence(seq, lens, padding):
+    device = seq.device
 
     padded = torch.zeros(
         lens.size(0),
         padding,
         seq.size(-1),
         dtype=seq.dtype,
+        device=device,
     )
 
     mask = torch.ones(
         padded.size(0),
         padded.size(1),
         dtype=seq.dtype,
+        device=device,
     )
 
     offset = 0

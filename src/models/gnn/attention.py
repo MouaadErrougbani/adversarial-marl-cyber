@@ -38,6 +38,7 @@ class SimpleSelfAttention(nn.Module):
                 v.size(0),
                 self.g_dim,
                 dtype=v.dtype,
+                device=v.device,
             )
 
         att = self.att(v)                   # B x N x h

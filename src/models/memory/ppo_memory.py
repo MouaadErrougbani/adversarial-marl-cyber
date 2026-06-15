@@ -51,7 +51,6 @@ class PPOMemory(Memory):
 
 
     def get_batches(self):
-        print("Get batches called, PPOMemory")
         '''
         Return chunks of the shuffled memory buffer 
         randomly partitioned into `self.batch_size`-sized chunks 

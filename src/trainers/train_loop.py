@@ -28,14 +28,26 @@ def train_loop(
     log_dir,
     checkpoint_dir,
     max_threads,
+    device="cpu",
 ):
     """
     Main PPO training loop.
     """
     for agent in agents:
         agent.train()
-    
-    
+
+    device_str = str(device).lower()
+
+    if "cpu" in device_str:
+        rollout_agents = agents
+    else:
+        rollout_agents = [
+            copy.deepcopy(agent).to("cpu")
+            for agent in agents
+        ]
+
+    for agent in rollout_agents:
+        agent.train()
 
     num_agents = len(agents)
 
@@ -66,18 +78,14 @@ def train_loop(
         #
 
         collection_start = time.perf_counter()
-        t0= time.perf_counter()
 
         rollout_data = collect_data(
-            agents,
+            rollout_agents,
             envs,
             hp,
             num_agents,
             max_threads,
         )
-
-        t1 = time.perf_counter()
-        print(f"Rollout collection time: {t1-t0}s", flush=True)
 
         collection_end = time.perf_counter()
         collection_time_sec = collection_end - collection_start
@@ -101,14 +109,11 @@ def train_loop(
         #
 
         training_start = time.perf_counter()
-        t2 = time.perf_counter()
+
         losses = train_models(
-            agents,
-            max_threads,
-            num_agents
+            agents, 
+            max_threads
         )
-        t3 = time.perf_counter()
-        print(f"Training time: {t3-t2}s", flush=True)
 
         training_end = time.perf_counter()
         training_time_sec = training_end - training_start
@@ -116,6 +121,23 @@ def train_loop(
         #
         # Sync rollout agents only if training is not CPU
         #
+
+        if "cpu" not in device_str:
+            for rollout_agent, train_agent in zip(rollout_agents, agents):
+                actor_state = {
+                    k: v.detach().cpu()
+                    for k, v in train_agent.actor.state_dict().items()
+                }
+
+                critic_state = {
+                    k: v.detach().cpu()
+                    for k, v in train_agent.critic.state_dict().items()
+                }
+
+                rollout_agent.actor.load_state_dict(actor_state)
+                rollout_agent.critic.load_state_dict(critic_state)
+                rollout_agent.to("cpu")
+                rollout_agent.train()
 
         #
         # Metrics: rewards

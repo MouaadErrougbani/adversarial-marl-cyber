@@ -1,11 +1,12 @@
 # src/trainers/updater.py
 
-import torch
 from joblib import Parallel, delayed
+import torch
+
+def train_models(agents, max_threads):
 
 
-def train_models(agents, max_threads, num_agents):
-
+    num_agents = len(agents)
 
     def learn(i):
         if i < 4:

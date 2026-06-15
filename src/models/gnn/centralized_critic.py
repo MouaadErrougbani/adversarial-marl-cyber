@@ -124,6 +124,7 @@ class CentralizedCriticNetwork(
             agents.size(1),
             1,
             dtype=agents.dtype,
+            device=agents.device,
         )
 
         # Fusion via attention

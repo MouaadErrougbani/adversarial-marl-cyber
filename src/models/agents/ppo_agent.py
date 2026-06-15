@@ -14,9 +14,6 @@ from src.models.utils import (
 from src.models.agents.agent import InductiveGraphAgent
 
 
-import time
-
-
 class InductiveGraphPPOAgent(InductiveGraphAgent):
     '''
     Class to manage agents' memories and learning (when training)
@@ -24,10 +21,10 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
     which action to take
     '''
     def __init__(self, in_dim, gamma=0.99, lmbda=0.95, clip=0.1, bs=5, epochs=6,
-                 a_kwargs=None, c_kwargs=None, training=True, concat_edges=False, num_agents=5, critic = None, actor = None):
+                 a_kwargs=None, c_kwargs=None, training=True, concat_edges=False, num_agents=5, device="cpu", critic = None, actor = None):
         a_kwargs = a_kwargs or {}
         c_kwargs = c_kwargs or {}
-        super().__init__(in_dim, a_kwargs, c_kwargs, training, concat_edges, critic=critic, actor=actor)
+        super().__init__(in_dim, a_kwargs, c_kwargs, training, concat_edges, device=device, critic=critic, actor=actor)
         self.external_actor  = actor is not None
         self.external_critic  = critic is not None
 
@@ -36,7 +33,7 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
         self.args = (in_dim,)
         self.kwargs = dict(
             gamma=gamma, lmbda=lmbda, clip=clip, bs=bs, epochs=epochs,
-            a_kwargs=a_kwargs, c_kwargs=c_kwargs, training=training, concat_edges=concat_edges, num_agents=num_agents
+            a_kwargs=a_kwargs, c_kwargs=c_kwargs, training=training, concat_edges=concat_edges, device=device, num_agents=num_agents
         )
 
         # PPO Hyperparams
@@ -67,6 +64,7 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
         state,is_blocked = obs
         if is_blocked:
             return None
+        state = self._move_to_device(state)
         distro = self.actor(*state)
 
         # I don't know why this would ever be called
@@ -169,26 +167,25 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
             returns = self._compute_returns(r, t)
             advantages = self._compute_advantages(returns, v)
 
+            device = self.device
             for b_idx, b in enumerate(batches):
                 b = b.tolist()
 
                 s_ = [s[idx] for idx in b]
                 a_ = [a[idx] for idx in b]
-                t0 = time.perf_counter()
+
                 batched_states = combine_marl_states(s_)
-                t1 = time.perf_counter()
+                batched_states = self._move_to_device(batched_states)
 
                 self._zero_grad()
 
                 dist = self.actor(*batched_states)
-                t2 = time.perf_counter()
-
                 critic_vals = self.critic(*batched_states)
-                t3 = time.perf_counter()
 
                 actions = torch.tensor(
                     a_,
                     dtype=torch.long,
+                    device=device,
                 )
 
                 new_log_probs = dist.log_prob(actions)
@@ -196,10 +193,11 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                 old_log_probs = torch.tensor(
                     [p[i] for i in b],
                     dtype=torch.float32,
+                    device=device,
                 )
 
-                a_t = advantages[b]
-                batch_returns = returns[b]
+                a_t = advantages[b].to(device)
+                batch_returns = returns[b].to(device)
 
                 actor_loss = self._compute_actor_loss(
                     new_log_probs=new_log_probs,
@@ -223,19 +221,18 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                 )
 
                 total_loss.backward()
-                t4 = time.perf_counter()
                 self._step()
 
                 total_loss_sum += float(
-                    total_loss.detach().item()
+                    total_loss.detach().cpu().item()
                 )
 
                 actor_loss_sum += float(
-                    actor_loss.detach().item()
+                    actor_loss.detach().cpu().item()
                 )
 
                 critic_loss_sum += float(
-                    critic_loss.detach().item()
+                    critic_loss.detach().cpu().item()
                 )
 
                 update_count += 1
@@ -246,14 +243,6 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                         f"C-Loss: {0.5 * critic_loss.item():0.4f} "
                         f"A-Loss: {actor_loss.item():0.4f} "
                         f"E-loss: {-entropy_loss.item() * 0.01:0.4f}",
-                        flush=True,
-                    )
-        
-                    print(
-                        f"combine={t1-t0:.3f}s "
-                        f"actor={t2-t1:.3f}s "
-                        f"critic={t3-t2:.3f}s "
-                        f"backward={t4-t3:.3f}s",
                         flush=True,
                     )
 
@@ -271,18 +260,6 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
             "actor_loss": actor_loss_sum / update_count,
             "critic_loss": critic_loss_sum / update_count,
         }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def load(in_f, device="cpu"):
