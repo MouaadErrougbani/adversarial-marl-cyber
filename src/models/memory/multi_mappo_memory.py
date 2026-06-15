@@ -97,7 +97,7 @@ class MultiMAPPOMemory(MultiMemory):
             all_rewards += memory.rewards
             all_terminals += memory.terminals
 
-            cnt = len(memory.states)
+            cnt = len(memory.local_observations)
 
             idx = torch.randperm(cnt) + offset 
             batch_indices += list(idx.split(self.batch_size))
