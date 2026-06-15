@@ -16,18 +16,17 @@ ALL_EXPERIMENTS = [
         "critic": "gnn_gcn",
     },
     {
-        "name": "ppo_gat_gat",
-        "algorithm": "ppo",
-        "actor": "gnn_gat",
-        "critic": "gnn_gat",
-    },
-    {
         "name": "mappo_gcn_gcn",
         "algorithm": "mappo",
         "actor": "gnn_gcn",
         "critic": "gnn_gcn",
     },
-    
+    {
+        "name": "ppo_gat_gat",
+        "algorithm": "ppo",
+        "actor": "gnn_gat",
+        "critic": "gnn_gat",
+    },   
     {
         "name": "mappo_gat_gat",
         "algorithm": "mappo",
