@@ -104,7 +104,62 @@ def build_command(
     return cmd
 
 
-def main():
+def main(args):
+    
+    if args.num_trains < 1:
+        raise ValueError("--num-trains must be >= 1")
+
+    if args.num_trains > len(ALL_EXPERIMENTS):
+        raise ValueError(
+            f"--num-trains={args.num_trains}, but only "
+            f"{len(ALL_EXPERIMENTS)} experiments are defined."
+        )
+
+    selected_experiments = ALL_EXPERIMENTS[: args.num_trains]
+
+    processes = []
+
+
+   
+    for exp in selected_experiments:
+        cmd = build_command(
+            exp=exp,
+            workers=args.workers,
+            max_threads=args.max_threads,
+            training_episodes=args.training_episodes,
+            batch_size=args.batch_size,
+            epochs=args.epochs,
+        )
+        process = subprocess.Popen(
+            cmd,
+            env=os.environ.copy(),
+        )
+        processes.append(
+            (
+                exp["name"],
+                process,
+            )
+        )
+    failed = False
+    for name, process in processes:
+        returncode = process.wait()
+        if returncode == 0:
+            print(
+                f"✅ {name} finished successfully",
+                flush=True,
+            )
+        else:
+            failed = True
+            print(
+                f"❌ {name} failed with returncode {returncode}",
+                flush=True,
+            )
+    if failed:
+        raise SystemExit(1)
+  
+
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Launch multiple PPO experiments in parallel"
     )
@@ -166,58 +221,4 @@ def main():
 
     args = parser.parse_args()
 
-    if args.num_trains < 1:
-        raise ValueError("--num-trains must be >= 1")
-
-    if args.num_trains > len(ALL_EXPERIMENTS):
-        raise ValueError(
-            f"--num-trains={args.num_trains}, but only "
-            f"{len(ALL_EXPERIMENTS)} experiments are defined."
-        )
-
-    selected_experiments = ALL_EXPERIMENTS[: args.num_trains]
-
-    processes = []
-
-
-   
-    for exp in selected_experiments:
-        cmd = build_command(
-            exp=exp,
-            workers=args.workers,
-            max_threads=args.max_threads,
-            training_episodes=args.training_episodes,
-            batch_size=args.batch_size,
-            epochs=args.epochs,
-        )
-        process = subprocess.Popen(
-            cmd,
-            env=os.environ.copy(),
-        )
-        processes.append(
-            (
-                exp["name"],
-                process,
-            )
-        )
-    failed = False
-    for name, process in processes:
-        returncode = process.wait()
-        if returncode == 0:
-            print(
-                f"✅ {name} finished successfully",
-                flush=True,
-            )
-        else:
-            failed = True
-            print(
-                f"❌ {name} failed with returncode {returncode}",
-                flush=True,
-            )
-    if failed:
-        raise SystemExit(1)
-  
-
-
-if __name__ == "__main__":
-    main()
+    main(args)
