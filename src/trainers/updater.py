@@ -1,25 +1,18 @@
 # src/trainers/updater.py
 
+import torch
 from joblib import Parallel, delayed
 
 
-def train_models(agents):
+def train_models(agents, max_threads, num_agents):
 
-    num_agents = len(agents)
 
     def learn(i):
-        import time
-
-        t0 = time.perf_counter()
-        result = agents[i].learn()
-        t1 = time.perf_counter()
-
-        print(
-            f"Agent {i}: {t1-t0:.2f}s",
-            flush=True
-        )
-
-        return result
+        if i < 4:
+                torch.set_num_threads(max_threads // 9)
+        else:
+                torch.set_num_threads((max_threads // 9) * num_agents)
+        return agents[i].learn()
 
     return Parallel(
         prefer="threads",

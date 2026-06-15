@@ -103,7 +103,9 @@ def train_loop(
         training_start = time.perf_counter()
         t2 = time.perf_counter()
         losses = train_models(
-            agents
+            agents,
+            max_threads,
+            num_agents
         )
         t3 = time.perf_counter()
         print(f"Training time: {t3-t2}s", flush=True)
