@@ -64,7 +64,7 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
         state,is_blocked = obs
         if is_blocked:
             return None
-        state = self._move_to_device(state)
+        # state = self._move_to_device(state)
         distro = self.actor(*state)
 
         # I don't know why this would ever be called
@@ -177,7 +177,7 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                 a_ = [a[idx] for idx in b]
 
                 batched_states = combine_marl_states(s_)
-                batched_states = self._move_to_device(batched_states)
+                # batched_states = self._move_to_device(batched_states)
 
                 self._zero_grad()
 

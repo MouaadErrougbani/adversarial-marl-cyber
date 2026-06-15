@@ -4,15 +4,6 @@ from joblib import Parallel, delayed
 
 
 def train_models(agents):
-    device_str = str(agents[0].device).lower()
-
-    if "cpu" not in device_str:
-        losses = []
-
-        for agent in agents:
-            losses.append(agent.learn())
-
-        return losses
 
     num_agents = len(agents)
 

@@ -29,8 +29,31 @@ class MultiPPOMemory(MultiMemory):
         """
         for mem in self.memories:
             mem.clear()
+
+    def get_batches(self): 
+        offset = 0
+        idxs = []
+        all_s = []; all_a = []
+        all_v = []; all_p = []
+        all_r = []; all_t = []
+
+        for i in range(self.tot):
+            all_s += self.mems[i].s
+            all_a += self.mems[i].a
+            all_v += self.mems[i].v
+            all_p += self.mems[i].p
+            all_r += self.mems[i].r
+            all_t += self.mems[i].t
+            
+            cnt = len(self.mems[i].s)
+            idx = torch.randperm(cnt) + offset 
+            idxs += list(idx.split(self.bs))
+            offset += cnt 
+
+        return all_s, all_a, all_v, all_p, all_r, all_t, idxs
         
     def get_batches(self):
+        offset = 0
         all_states = []
         all_actions = []
         all_values = []
@@ -47,14 +70,20 @@ class MultiPPOMemory(MultiMemory):
             all_rewards += memory.rewards
             all_terminals += memory.terminals
 
-        # 2) Nombre total de samples
-        total_samples = len(all_actions)
+            cnt = len(memory.states)
 
-        # 3) Shuffle global
-        global_indices = torch.randperm(total_samples)
+            idx = torch.randperm(cnt) + offset 
+            batch_indices += list(idx.split(self.batch_size))
+            offset += cnt
 
-        # 4) Mini-batches globaux
-        batch_indices = global_indices.split(self.batch_size)
+        # # 2) Nombre total de samples
+        # total_samples = len(all_actions)
+
+        # # 3) Shuffle global
+        # global_indices = torch.randperm(total_samples)
+
+        # # 4) Mini-batches globaux
+        # batch_indices = global_indices.split(self.batch_size)
         return (
             all_states,
             all_actions,

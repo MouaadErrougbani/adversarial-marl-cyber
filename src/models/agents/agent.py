@@ -27,7 +27,7 @@ class InductiveGraphAgent(ABC):
         self.critic = critic or InductiveCriticNetwork(in_dim, **c_kwargs)
         self.external_actor  = None
         self.external_critic  = None
-        self.device = device
+        self.device = "cpu"
         self.actor.to(self.device)
         self.critic.to(self.device)
         self.memory = None
