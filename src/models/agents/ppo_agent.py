@@ -170,6 +170,7 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
 
             device = self.device
             for b_idx, b in enumerate(batches):
+                print("Batch", b_idx, flush=True)
                 b = b.tolist()
 
                 s_ = [s[idx] for idx in b]
@@ -206,21 +207,23 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                     advantages=a_t,
                 )
 
+                print("Actor loss computed", flush=True)
+
                 critic_loss = self._compute_critic_loss(
                     critic_values=critic_vals,
                     returns=batch_returns,
                 )
-
+                print("Critic loss computed", flush=True)
                 entropy_loss = self._compute_entropy_loss(
                     dist
                 )
-
+                print("Entropy loss computed", flush=True)
                 total_loss = self._compute_total_loss(
                     actor_loss=actor_loss,
                     critic_loss=critic_loss,
                     entropy_loss=entropy_loss,
                 )
-
+                print("Total loss computed", flush=True)
                 total_loss.backward()
                 self._step()
 
