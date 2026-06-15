@@ -97,24 +97,24 @@ class MultiMAPPOMemory(MultiMemory):
             all_rewards += memory.rewards
             all_terminals += memory.terminals
 
-            # cnt = len(memory.local_observations)
+            cnt = len(memory.local_observations)
 
-            # idx = torch.randperm(cnt) + offset 
-            # batch_indices += list(idx.split(self.batch_size))
-            # offset += cnt
+            idx = torch.randperm(cnt) + offset 
+            batch_indices += list(idx.split(self.batch_size))
+            offset += cnt
 
-        # Nombre total de samples
-        total_samples = len(all_actions)
+        # # Nombre total de samples
+        # total_samples = len(all_actions)
 
-        # Shuffle global
-        global_indices = torch.randperm(
-            total_samples
-        )
+        # # Shuffle global
+        # global_indices = torch.randperm(
+        #     total_samples
+        # )
 
-        # Mini-batches globaux
-        batch_indices = global_indices.split(
-            self.batch_size
-        )
+        # # Mini-batches globaux
+        # batch_indices = global_indices.split(
+        #     self.batch_size
+        # )
 
         return (
             all_local_observations,
