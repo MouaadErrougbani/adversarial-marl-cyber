@@ -115,6 +115,8 @@ def run_train(cfg):
         f"Workers: {hp.workers}", flush=True
     )
 
+    print(f"Max threads: {max_threads}", flush=True)
+
     print(
         f"Episode length: "
         f"{hp.episode_len}", flush=True
