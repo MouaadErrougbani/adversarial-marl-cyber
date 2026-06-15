@@ -28,8 +28,6 @@ class InductiveGraphAgent(ABC):
         self.external_actor  = None
         self.external_critic  = None
         self.device = device
-        self.actor.to(self.device)
-        self.critic.to(self.device)
         self.memory = None
         self.kwargs = None
         self.args = None
@@ -100,19 +98,13 @@ class InductiveGraphAgent(ABC):
 
 
     def _step(self):
-        if self._is_xla_device():
-            import torch_xla.core.xla_model as xm
-            xm.optimizer_step(self.actor.opt)
-            xm.optimizer_step(self.critic.opt)
-            xm.mark_step()
-        else:
-            if self.external_actor is None and self.external_critic is None:
-                raise ValueError("Cannot step when both actor and critic are external")
-            if not self.external_actor :
-                self.actor.opt.step()
-            if not self.external_critic :
-               
-                self.critic.opt.step()
+        if self.external_actor is None and self.external_critic is None:
+            raise ValueError("Cannot step when both actor and critic are external")
+        if not self.external_actor :
+            self.actor.opt.step()
+        if not self.external_critic :
+           
+            self.critic.opt.step()
 
 
     def set_deterministic(self, val):

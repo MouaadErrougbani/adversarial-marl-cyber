@@ -72,7 +72,6 @@ def run_train(cfg, device = "cpu"):
 
     agents = build_agents(
         cfg,
-        device=device,
     )
 
     #
@@ -166,5 +165,4 @@ def run_train(cfg, device = "cpu"):
         log_dir=log_dir,
         checkpoint_dir=checkpoint_dir,
         max_threads=max_threads,
-        device=device,
     )

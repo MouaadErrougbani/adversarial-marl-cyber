@@ -64,7 +64,6 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
         state,is_blocked = obs
         if is_blocked:
             return None
-        state = self._move_to_device(state)
         distro = self.actor(*state)
 
         # I don't know why this would ever be called
@@ -167,7 +166,6 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
             returns = self._compute_returns(r, t)
             advantages = self._compute_advantages(returns, v)
 
-            device = self.device
             for b_idx, b in enumerate(batches):
                 b = b.tolist()
 
@@ -175,7 +173,6 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                 a_ = [a[idx] for idx in b]
 
                 batched_states = combine_marl_states(s_)
-                batched_states = self._move_to_device(batched_states)
 
                 self._zero_grad()
 
@@ -185,7 +182,6 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                 actions = torch.tensor(
                     a_,
                     dtype=torch.long,
-                    device=device,
                 )
 
                 new_log_probs = dist.log_prob(actions)
@@ -193,11 +189,10 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                 old_log_probs = torch.tensor(
                     [p[i] for i in b],
                     dtype=torch.float32,
-                    device=device,
                 )
 
-                a_t = advantages[b].to(device)
-                batch_returns = returns[b].to(device)
+                a_t = advantages[b]
+                batch_returns = returns[b]
 
                 actor_loss = self._compute_actor_loss(
                     new_log_probs=new_log_probs,
@@ -224,15 +219,15 @@ class InductiveGraphPPOAgent(InductiveGraphAgent):
                 self._step()
 
                 total_loss_sum += float(
-                    total_loss.detach().cpu().item()
+                    total_loss.detach().item()
                 )
 
                 actor_loss_sum += float(
-                    actor_loss.detach().cpu().item()
+                    actor_loss.detach().item()
                 )
 
                 critic_loss_sum += float(
-                    critic_loss.detach().cpu().item()
+                    critic_loss.detach().item()
                 )
 
                 update_count += 1

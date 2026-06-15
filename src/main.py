@@ -4,7 +4,6 @@ import argparse
 from pathlib import Path
 
 from src.utils import load_config
-from src.utils.device import get_device
 
 from src.trainers import (
     run_train,
@@ -59,14 +58,10 @@ def main():
         overrides=args.override,
     )
 
-    requested_device = cfg.get("train", {}).get("device", "auto")
-    device, device_status = get_device(requested_device)
-    device_str = str(device).lower()
-
 
     if args.command == "train":
         
-        run_train(cfg, device=device)
+        run_train(cfg)
 
     elif args.command == "eval":
         raise NotImplementedError(
