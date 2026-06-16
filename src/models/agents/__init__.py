@@ -9,8 +9,13 @@ from .mappo_agent import (
     InductiveGraphMAPPOAgent,
 )
 
+from .maddpg_agent import (
+    InductiveGraphMADDPGAgent,
+)
+
 __all__ = [
     "InductiveGraphPPOAgent",
     "InductiveGraphMAPPOAgent",
+    "InductiveGraphMADDPGAgent",
     "load",
 ]

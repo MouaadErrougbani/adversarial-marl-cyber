@@ -3,6 +3,7 @@
 from .agents import (
     InductiveGraphPPOAgent,
     InductiveGraphMAPPOAgent,
+    InductiveGraphMADDPGAgent,
 
 )
 
@@ -20,6 +21,8 @@ from .memory import (
     MultiPPOMemory,
     MAPPOMemory,
     MultiMAPPOMemory,
+    MADDPGMemory,
+    MultiMADDPGMemory,
 )
 
 from .utils import (
@@ -34,6 +37,8 @@ from .load import (
 __all__ = [
     # agents
     "InductiveGraphPPOAgent",
+    "InductiveGraphMAPPOAgent",
+    "InductiveGraphMADDPGAgent",
 
     # gnn
     "InductiveActorNetwork",
@@ -48,10 +53,13 @@ __all__ = [
     "MultiPPOMemory",
     "MAPPOMemory",
     "MultiMAPPOMemory",
+    "MADDPGMemory",
+    "MultiMADDPGMemory",
 
     # utils
     "combine_subgraphs",
     "combine_marl_states",
+    
 
     # loader
     "load",

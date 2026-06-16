@@ -10,28 +10,39 @@ import sys
 
 ALL_EXPERIMENTS = [
     {
-        "name": "ppo_gcn_gcn",
-        "algorithm": "ppo",
+        "name": "maddpg_gcn_gcn",
+        "algorithm": "maddpg",
         "actor": "gnn_gcn",
         "critic": "gnn_gcn",
+        "resume": False,
     },
     {
         "name": "mappo_gcn_gcn",
         "algorithm": "mappo",
         "actor": "gnn_gcn",
         "critic": "gnn_gcn",
+        "resume": True,
     },
     {
         "name": "ppo_gat_gat",
         "algorithm": "ppo",
         "actor": "gnn_gat",
         "critic": "gnn_gat",
+        "resume": True,
     },   
     {
         "name": "mappo_gat_gat",
         "algorithm": "mappo",
         "actor": "gnn_gat",
         "critic": "gnn_gat",
+        "resume": True,
+    },
+    {
+        "name": "ppo_gcn_gcn",
+        "algorithm": "ppo",
+        "actor": "gnn_gcn",
+        "critic": "gnn_gcn",
+        "resume": True,
     },
 ]
 
@@ -129,7 +140,7 @@ def main(args):
             training_episodes=args.training_episodes,
             batch_size=args.batch_size,
             epochs=args.epochs,
-            resume=args.resume,
+            resume=args.resume or exp.get("resume", False),
         )
         process = subprocess.Popen(
             cmd,

@@ -5,10 +5,13 @@ from .models import (
     InductiveCriticNetwork,
     InductiveGraphPPOAgent,
     InductiveGraphMAPPOAgent,
+    InductiveGraphMADDPGAgent,
     PPOMemory,
     MultiPPOMemory,
     MAPPOMemory,
     MultiMAPPOMemory,
+    MADDPGMemory,
+    MultiMADDPGMemory,
     load,
 )
 
@@ -36,10 +39,14 @@ __all__ = [
     "InductiveCriticNetwork",
     "InductiveGraphPPOAgent",
     "InductiveGraphMAPPOAgent",
+    "InductiveGraphMADDPGAgent",
+
     "PPOMemory",
     "MultiPPOMemory",
     "MAPPOMemory",
     "MultiMAPPOMemory",
+    "MADDPGMemory",
+    "MultiMADDPGMemory",
     "load",
     "ObservationGraph",
     "NodeTracker",

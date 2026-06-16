@@ -4,6 +4,7 @@ from src import (
     make_env,
     InductiveGraphPPOAgent,
     InductiveGraphMAPPOAgent,
+    InductiveGraphMADDPGAgent,
     ObservationGraph,
 )
 
@@ -15,7 +16,8 @@ def build_agents(cfg):
     algorithm = cfg["train"]["algorithm"].upper()
     agent_registry = {
         "PPO": InductiveGraphPPOAgent,
-        "MAPPO" : InductiveGraphMAPPOAgent
+        "MAPPO" : InductiveGraphMAPPOAgent,
+        "MADDPG": InductiveGraphMADDPGAgent
     }
 
     num_agents = cfg["train"]["num_agents"]
@@ -69,6 +71,40 @@ def build_agents(cfg):
                 agents.append(agent)
             return agents
         
+        elif algorithm == "MADDPG":
+
+            agents = [
+
+                AgentClass(
+                    in_dim=ObservationGraph.DIM + 5,
+                    a_kwargs=cfg.get("actor", {}),
+                    c_kwargs=cfg.get("critic", {}),
+                    bs=cfg["train"]["batch_size"],
+                    num_agents=num_agents,
+                    **cfg.get("hyperparams", {})
+                )
+
+                for _ in range(num_agents)
+            ]
+
+            #
+            # Chaque agent doit connaître
+            # les autres agents
+            #
+
+            for idx, agent in enumerate(
+                agents
+            ):
+
+                agent.agent_id = idx
+
+                agent.set_agents(
+                    agents
+                )
+                
+            return agents
+        
+
         else:
             raise ValueError(f"Unsupported algorithm: {algorithm}")
 
