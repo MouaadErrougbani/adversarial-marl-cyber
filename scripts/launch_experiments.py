@@ -42,6 +42,7 @@ def build_command(
     training_episodes,
     batch_size,
     epochs,
+    resume = False,
 ):
     cmd = [
         sys.executable,
@@ -67,7 +68,7 @@ def build_command(
         f"run.name={exp['name']}",
 
         "--override",
-        "train.resume=false",
+        f"train.resume={resume}",
 
         "--override",
         f"train.workers={workers}",
@@ -128,6 +129,7 @@ def main(args):
             training_episodes=args.training_episodes,
             batch_size=args.batch_size,
             epochs=args.epochs,
+            resume=args.resume,
         )
         process = subprocess.Popen(
             cmd,
@@ -182,6 +184,13 @@ if __name__ == "__main__":
         type=int,
         default=30,
         help="Max threads per training",
+    )
+
+    parser.add_argument(
+        "--resume",
+        type=int,
+        default=0,
+        help="Whether to resume training",
     )
 
     parser.add_argument(
