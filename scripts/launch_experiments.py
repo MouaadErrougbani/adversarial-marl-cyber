@@ -17,11 +17,11 @@ ALL_EXPERIMENTS = [
         "resume": False,
     },
     {
-        "name": "mappo_gcn_gcn",
-        "algorithm": "mappo",
-        "actor": "gnn_gcn",
-        "critic": "gnn_gcn",
-        "resume": True,
+        "name": "maddpg_gat_gat",
+        "algorithm": "maddpg",
+        "actor": "gnn_gat",
+        "critic": "gnn_gat",
+        "resume": False,
     },
     {
         "name": "ppo_gat_gat",
@@ -35,6 +35,14 @@ ALL_EXPERIMENTS = [
         "algorithm": "mappo",
         "actor": "gnn_gat",
         "critic": "gnn_gat",
+        "resume": True,
+    },
+    
+    {
+        "name": "mappo_gcn_gcn",
+        "algorithm": "mappo",
+        "actor": "gnn_gcn",
+        "critic": "gnn_gcn",
         "resume": True,
     },
     {
