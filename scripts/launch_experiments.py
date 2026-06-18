@@ -9,20 +9,7 @@ import sys
 
 
 ALL_EXPERIMENTS = [
-    {
-        "name": "maddpg_gcn_gcn",
-        "algorithm": "maddpg",
-        "actor": "gnn_gcn",
-        "critic": "gnn_gcn",
-        "resume": False,
-    },
-    {
-        "name": "maddpg_gat_gat",
-        "algorithm": "maddpg",
-        "actor": "gnn_gat",
-        "critic": "gnn_gat",
-        "resume": False,
-    },
+    
     {
         "name": "ppo_gat_gat",
         "algorithm": "ppo",
@@ -51,6 +38,20 @@ ALL_EXPERIMENTS = [
         "actor": "gnn_gcn",
         "critic": "gnn_gcn",
         "resume": True,
+    },
+    {
+        "name": "maddpg_gcn_gcn",
+        "algorithm": "maddpg",
+        "actor": "gnn_gcn",
+        "critic": "gnn_gcn",
+        "resume": False,
+    },
+    {
+        "name": "maddpg_gat_gat",
+        "algorithm": "maddpg",
+        "actor": "gnn_gat",
+        "critic": "gnn_gat",
+        "resume": False,
     },
 ]
 
