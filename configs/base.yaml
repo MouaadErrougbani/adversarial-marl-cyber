@@ -30,9 +30,9 @@ critic:
   hidden2: 128
   encoder: gnn_gcn # gnn_gat, gnn_gcn
 hyperparams:
-  #clip: 0.2
+  clip: 0.2
   gamma: 0.99
-  #lmbda: 0.95
+  lmbda: 0.95
 run:
   name: model
 eval:
