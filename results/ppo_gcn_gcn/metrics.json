@@ -1,0 +1,40 @@
+{
+    "submission": {
+        "author": "Evaluation",
+        "team": "Mouaad",
+        "technique": "Graph-based PPO With Intra-agent Communication"
+    },
+    "environment": {
+        "cyborg_version": "4.0",
+        "scenario": "Scenario4"
+    },
+    "parameters": {
+        "algorithm": "PPO",
+        "seed": 42,
+        "episode_length": 500,
+        "max_episodes": 2,
+        "workers": 4
+    },
+    "time": {
+        "start": "2026-06-21 19:41:48.761112",
+        "end": "2026-06-21 19:42:52.203440",
+        "elapsed": "0:01:03.442328",
+        "elapsed_seconds": 63.442328
+    },
+    "episodes": [
+        {
+            "episode": 1,
+            "avg_reward": -0.746,
+            "std_reward": 1.2871664986280449,
+            "min_reward": -8.0,
+            "max_reward": 0.0
+        },
+        {
+            "episode": 2,
+            "avg_reward": -1.15,
+            "std_reward": 1.4379274218614382,
+            "min_reward": -8.0,
+            "max_reward": 0.0
+        }
+    ]
+}

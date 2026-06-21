@@ -1,6 +1,16 @@
 eval:
+  algorithm: auto #MADDPG, MAPPO, PPO, auto
+  num_agents: 5
+
+  checkpoint_dir: checkpoints
+  checkpoint_pattern: "ppo_gcn_gcn-{agent_id}_checkpoint.pt"
+
+  device: cpu
+
   max_eps: 100
-  distribute: 1
-  seed: null
+  episode_length: 500
+  distribute: 4
+  seed: 42
+
   append_timestamp: false
-  output_path: tmp
+  output_path: results

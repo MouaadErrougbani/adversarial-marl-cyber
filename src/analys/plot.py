@@ -639,7 +639,7 @@ if __name__ == "__main__":
             f"{len(data)} iterations"
         )
 
-    generate_all_plots(
-        logs,
-        output_dir="plots"
-    )
+    # generate_all_plots(
+    #     logs,
+    #     output_dir="plots"
+    # )

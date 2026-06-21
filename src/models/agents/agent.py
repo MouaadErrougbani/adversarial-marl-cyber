@@ -62,6 +62,13 @@ class InductiveGraphAgent(ABC):
         self.training = False
         self.actor.eval()
         self.critic.eval()
+    
+    def to(self, device):
+        '''
+        Move modules to device
+        '''
+        self.actor.to(device)
+        self.critic.to(device)
 
     def _zero_grad(self):
         '''

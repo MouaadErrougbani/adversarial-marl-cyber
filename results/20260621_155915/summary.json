@@ -1,0 +1,28 @@
+{
+    "Submission": {
+        "author": "Evaluation",
+        "team": "Mouaad",
+        "technique": "Graph-based PPO With Intra-agent Communication"
+    },
+    "parameters": {
+        "seed": 42,
+        "episode_length": 500,
+        "max_episodes": 10
+    },
+    "time": {
+        "start": "2026-06-21 15:59:15.827540",
+        "end": "2026-06-21 16:10:12.109971",
+        "elapsed": "0:10:56.282431"
+    },
+    "reward": {
+        "mean": -727.3,
+        "stdev": 283.8004189175516
+    },
+    "agents": {
+        "blue_agent_0": "<src.models.agents.ppo_agent.InductiveGraphPPOAgent object at 0xfaab9e027b20>",
+        "blue_agent_1": "<src.models.agents.ppo_agent.InductiveGraphPPOAgent object at 0xfaab9ded6860>",
+        "blue_agent_2": "<src.models.agents.ppo_agent.InductiveGraphPPOAgent object at 0xfaab9ded5f00>",
+        "blue_agent_3": "<src.models.agents.ppo_agent.InductiveGraphPPOAgent object at 0xfaab9dec0580>",
+        "blue_agent_4": "<src.models.agents.ppo_agent.InductiveGraphPPOAgent object at 0xfaab9dec1a80>"
+    }
+}
