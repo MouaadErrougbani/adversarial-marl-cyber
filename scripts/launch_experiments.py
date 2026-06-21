@@ -9,17 +9,18 @@ import sys
 
 
 ALL_EXPERIMENTS = [
+       
+    {
+        "name": "mappo_gat_gat",
+        "algorithm": "mappo",
+        "actor": "gnn_gat",
+        "critic": "gnn_gat",
+        "resume": True,
+    },
     
     {
         "name": "ppo_gat_gat",
         "algorithm": "ppo",
-        "actor": "gnn_gat",
-        "critic": "gnn_gat",
-        "resume": True,
-    },   
-    {
-        "name": "mappo_gat_gat",
-        "algorithm": "mappo",
         "actor": "gnn_gat",
         "critic": "gnn_gat",
         "resume": True,
