@@ -221,10 +221,9 @@ __marimo__/
 
 kaggle_run.py
 kernel-metadata.json
-adversarial-marl-cyber/
 outputs/
 projet_detail.md
 plan/
 Final
 La Tex/
-results/
+results/*
