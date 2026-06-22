@@ -2,6 +2,7 @@ import os
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 
 
 def plot_reward_with_std_band(logs: dict, save_path: str):
@@ -66,52 +67,123 @@ def plot_total_loss_per_agent(
     path: str
 ):
     """
-    Trace l'évolution de la loss totale pour chaque agent.
-    Permet d'analyser la convergence globale.
+    Trace l'évolution de la loss totale.
+
+    Pour MAPPO :
+    - trace uniquement total_loss_agent_0 ;
+    - n'affiche pas la légende de l'agent ;
+    - considère cette courbe comme la loss du critic centralisé.
+
+    Pour les autres modèles :
+    - trace les losses des 5 agents.
     """
-    for model_name, history in logs.items():
-        save_path = path.replace(".png", f"_{model_name}.png")
 
+    n_models = len(logs)
 
-        plt.figure(figsize=(10, 6))
+    if n_models == 0:
+        return
 
-        for agent_id in range(5):
+    n_cols = 2
+    n_rows = math.ceil(n_models / n_cols)
+
+    fig, axes = plt.subplots(
+        n_rows,
+        n_cols,
+        figsize=(14, 5 * n_rows),
+        squeeze=False
+    )
+
+    axes = axes.flatten()
+
+    for ax, (model_name, history) in zip(axes, logs.items()):
+
+        is_mappo = model_name.lower().startswith("mappo")
+
+        # MAPPO utilise la loss stockée dans agent 0
+        agent_ids = [0] if is_mappo else range(5)
+
+        curves_plotted = 0
+        all_losses = []
+
+        for agent_id in agent_ids:
 
             key = f"total_loss_agent_{agent_id}"
 
             losses = [
                 step[key]
                 for step in history
-                if key in step
+                if key in step and step[key] is not None
             ]
+
+            if not losses:
+                continue
 
             iterations = range(len(losses))
 
-            plt.plot(
+            ax.plot(
                 iterations,
                 losses,
                 marker="o",
                 linewidth=2,
-                label=f"Agent {agent_id}",
+                label=None if is_mappo else f"Agent {agent_id}"
             )
 
-        plt.xlabel("Iteration")
-        plt.ylabel("Total Loss")
-        plt.title(f"Total Loss per Agent - {model_name}")
+            all_losses.extend(losses)
+            curves_plotted += 1
 
-        plt.grid(True, linestyle="--", alpha=0.5)
-        plt.legend()
+        ax.set_xlabel("Iteration")
+        ax.set_ylabel("Total Loss")
+        ax.grid(True, linestyle="--", alpha=0.5)
 
-        plt.yscale("log")
+        if is_mappo:
+            ax.set_title(
+                f"Total Loss - {model_name}\nCentralized Critic"
+            )
+        else:
+            ax.set_title(
+                f"Total Loss per Agent - {model_name}"
+            )
 
-        os.makedirs(
-            os.path.dirname(save_path),
-            exist_ok=True
-        )
+        if not is_mappo and curves_plotted > 0:
+            ax.legend()
 
-        plt.tight_layout()
-        plt.savefig(save_path, dpi=300)
-        plt.close()
+        if all_losses:
+            if all(value > 0 for value in all_losses):
+                ax.set_yscale("log")
+            else:
+                ax.set_yscale("symlog", linthresh=1e-3)
+        else:
+            ax.text(
+                0.5,
+                0.5,
+                "Aucune loss disponible",
+                ha="center",
+                va="center",
+                transform=ax.transAxes
+            )
+
+    for ax in axes[n_models:]:
+        ax.set_visible(False)
+
+    directory = os.path.dirname(path)
+
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+
+    fig.suptitle(
+        "Total Loss — Comparaison des algorithmes",
+        fontsize=16
+    )
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+
+    plt.savefig(
+        path,
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.close(fig)
 
 def plot_collection_time(logs: dict, save_path: str):
     """
@@ -155,74 +227,36 @@ def plot_collection_time(logs: dict, save_path: str):
     plt.savefig(save_path, dpi=300)
     plt.close()
 
-def plot_reward_per_agent(
-    logs: dict,
-    path: str
-):
-    """
-    Trace l'évolution du reward moyen pour chaque agent.
-    Permet d'analyser l'équilibre des performances.
-    """
-
-    for model_name, history in logs.items():
-        save_path = path.replace(".png", f"_{model_name}.png")
-
-
-        plt.figure(figsize=(10, 6))
-
-        for agent_id in range(5):
-
-            key = f"avg_reward_agent_{agent_id}"
-
-            rewards = [
-                step[key]
-                for step in history
-                if key in step
-            ]
-
-            iterations = range(len(rewards))
-
-            plt.plot(
-                iterations,
-                rewards,
-                marker="o",
-                linewidth=2,
-                label=f"Agent {agent_id}",
-            )
-
-        plt.xlabel("Iteration")
-        plt.ylabel("Average Reward")
-        plt.title(f"Reward per Agent - {model_name}")
-
-        plt.grid(True, linestyle="--", alpha=0.5)
-        plt.legend()
-
-        os.makedirs(
-            os.path.dirname(save_path),
-            exist_ok=True
-        )
-
-        plt.tight_layout()
-        plt.savefig(save_path, dpi=300)
-        plt.close()
-
 def plot_actor_loss_per_agent(
     logs: dict,
     path: str
 ):
     """
     Trace l'évolution de l'actor loss pour chaque agent.
-    Permet d'évaluer l'équilibre de l'apprentissage multi-agent.
+
+    Une seule figure est enregistrée, avec un sous-graphe
+    pour chaque modèle/algorithme.
     """
 
-    for model_name, history in logs.items():
-        save_path = path.replace(".png", f"_{model_name}.png")
+    n_models = len(logs)
 
+    # Organisation automatique des sous-graphiques
+    n_cols = 2
+    n_rows = math.ceil(n_models / n_cols)
 
-        plt.figure(figsize=(10, 6))
+    fig, axes = plt.subplots(
+        n_rows,
+        n_cols,
+        figsize=(14, 5 * n_rows),
+        squeeze=False
+    )
+
+    # Transforme la matrice d'axes en liste
+    axes = axes.flatten()
+
+    for ax, (model_name, history) in zip(axes, logs.items()):
 
         for agent_id in range(5):
-
             key = f"actor_loss_agent_{agent_id}"
 
             losses = [
@@ -231,31 +265,42 @@ def plot_actor_loss_per_agent(
                 if key in step
             ]
 
+            if not losses:
+                continue
+
             iterations = range(len(losses))
 
-            plt.plot(
+            ax.plot(
                 iterations,
                 losses,
                 marker="o",
                 linewidth=2,
-                label=f"Agent {agent_id}",
+                label=f"Agent {agent_id}"
             )
 
-        plt.xlabel("Iteration")
-        plt.ylabel("Actor Loss")
-        plt.title(f"Actor Loss per Agent - {model_name}")
+        ax.set_xlabel("Iteration")
+        ax.set_ylabel("Actor Loss")
+        ax.set_title(f"Actor Loss per Agent - {model_name}")
+        ax.grid(True, linestyle="--", alpha=0.5)
+        ax.legend()
 
-        plt.grid(True, linestyle="--", alpha=0.5)
-        plt.legend()
+    # Masquer les sous-graphiques inutilisés
+    for ax in axes[n_models:]:
+        ax.set_visible(False)
 
-        os.makedirs(
-            os.path.dirname(save_path),
-            exist_ok=True
-        )
+    directory = os.path.dirname(path)
 
-        plt.tight_layout()
-        plt.savefig(save_path, dpi=300)
-        plt.close()
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+
+    fig.suptitle(
+        "Actor Loss per Agent — Comparaison des algorithmes",
+        fontsize=16
+    )
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.savefig(path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
 
 def plot_critic_loss(logs: dict, save_path: str):
     """
@@ -613,10 +658,6 @@ def generate_all_plots(logs: dict, output_dir: str = "plots"):
         os.path.join(output_dir, "actor_loss.png")
     )
 
-    plot_reward_per_agent(
-        logs,
-        os.path.join(output_dir, "reward_per_agent.png")
-    )
 
     plot_total_loss_per_agent(
         logs,
@@ -639,7 +680,7 @@ if __name__ == "__main__":
             f"{len(data)} iterations"
         )
 
-    # generate_all_plots(
-    #     logs,
-    #     output_dir="plots"
-    # )
+    generate_all_plots(
+        logs,
+        output_dir="plots"
+    )
