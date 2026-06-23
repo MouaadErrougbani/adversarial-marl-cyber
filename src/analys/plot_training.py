@@ -190,6 +190,32 @@ def validate_shared_rewards(
             )
 
 
+def validate_iteration_counts(
+    logs: dict[str, list[dict[str, Any]]],
+    expected_iterations: int = 75,
+) -> None:
+    """Vérifie que chaque configuration contient exactement 75 itérations."""
+
+    invalid = []
+    for model_name, history in logs.items():
+        if len(history) != expected_iterations:
+            invalid.append(
+                f"{display_name(model_name)}: {len(history)} itérations"
+            )
+
+    # if invalid:
+    #     details = "; ".join(invalid)
+    #     raise ValueError(
+    #         "Nombre d'itérations invalide. "
+    #         f"Attendu: {expected_iterations}. Reçu: {details}"
+    #     )
+
+    print(
+        f"[OK] Les {len(logs)} configurations contiennent "
+        f"exactement {expected_iterations} itérations."
+    )
+
+
 # ============================================================
 # Utilitaires numériques
 # ============================================================
@@ -225,7 +251,7 @@ def extract_metric(
         if value is None:
             continue
 
-        iterations.append(index)
+        iterations.append(index + 1)
         values.append(value)
 
     return (
@@ -288,7 +314,7 @@ def align_metrics(
         if not valid:
             continue
 
-        iterations.append(index)
+        iterations.append(index + 1)
 
         for name in names:
             collected[name].append(row[name])
@@ -575,7 +601,7 @@ def plot_pairwise_reward_comparisons(
     output_directory: str | Path,
     window_size: int = 10,
 ) -> None:
-    """Produit les quatre comparaisons contrôlées du mémoire."""
+    """Produit les quatre comparaisons par paires du mémoire."""
 
     output_directory = Path(output_directory)
 
@@ -611,7 +637,7 @@ def plot_pairwise_reward_comparisons(
 def plot_final_training_performance(
     logs: dict[str, list[dict[str, Any]]],
     save_path: str | Path,
-    last_n_iterations: int = 50,
+    last_n_iterations: int = 20,
 ) -> None:
     """
     Compare la moyenne de avg_reward sur les dernières itérations.
@@ -682,7 +708,7 @@ def plot_final_training_performance(
 def plot_final_reward_boxplot(
     logs: dict[str, list[dict[str, Any]]],
     save_path: str | Path,
-    last_n_iterations: int = 50,
+    last_n_iterations: int = 20,
 ) -> None:
     """
     Boxplot des avg_reward sur les dernières itérations.
@@ -879,7 +905,7 @@ def plot_average_loss_comparison(
 def plot_final_agent_loss_bars(
     logs: dict[str, list[dict[str, Any]]],
     output_directory: str | Path,
-    last_n_iterations: int = 50,
+    last_n_iterations: int = 20,
     num_agents: int = NUM_AGENTS,
 ) -> None:
     """
@@ -1107,82 +1133,67 @@ def plot_total_time_comparison(
 def export_training_summary_csv(
     logs: dict[str, list[dict[str, Any]]],
     save_path: str | Path,
-    last_n_iterations: int = 50,
+    last_n_iterations: int = 20,
 ) -> None:
-    """Exporte un résumé global des quatre configurations."""
+    """Exporte les statistiques finales nécessaires au rapport."""
 
     save_path = ensure_parent_directory(save_path)
-
     fieldnames = [
         "configuration",
         "num_iterations",
         "global_reward_mean",
         "global_reward_std",
-        "final_reward_mean",
-        "final_reward_std",
+        "final_reward_mean_20",
+        "final_reward_std_20",
+        "final_reward_min_20",
+        "final_reward_max_20",
         "best_recorded_avg_reward",
         "worst_recorded_avg_reward",
         "total_collection_minutes",
-        "total_training_minutes",
+        "total_optimization_minutes",
         "total_minutes",
+        "average_minutes_per_iteration",
     ]
-
     rows: list[dict[str, Any]] = []
 
     for model_name, history in logs.items():
         _, rewards = extract_metric(history, "avg_reward")
-
         if rewards.size == 0:
             continue
 
         count = min(last_n_iterations, rewards.size)
         final_rewards = rewards[-count:]
-
-        collection_seconds = 0.0
-        training_seconds = 0.0
-
-        for step in history:
-            collection_seconds += (
-                safe_float(step.get("collection_time_sec"))
-                or 0.0
-            )
-            training_seconds += (
-                safe_float(step.get("training_time_sec"))
-                or 0.0
-            )
-
-        rows.append(
-            {
-                "configuration": display_name(model_name),
-                "num_iterations": int(rewards.size),
-                "global_reward_mean": float(np.mean(rewards)),
-                "global_reward_std": float(np.std(rewards)),
-                "final_reward_mean": float(np.mean(final_rewards)),
-                "final_reward_std": float(np.std(final_rewards)),
-                "best_recorded_avg_reward": float(np.max(rewards)),
-                "worst_recorded_avg_reward": float(np.min(rewards)),
-                "total_collection_minutes": collection_seconds / 60.0,
-                "total_training_minutes": training_seconds / 60.0,
-                "total_minutes": (
-                    collection_seconds + training_seconds
-                ) / 60.0,
-            }
+        number_of_iterations = int(rewards.size)
+        collection_seconds = sum(
+            safe_float(step.get("collection_time_sec")) or 0.0
+            for step in history
         )
-
-    rows.sort(
-        key=lambda row: row["final_reward_mean"],
-        reverse=True,
-    )
-
-    with save_path.open(
-        "w",
-        newline="",
-        encoding="utf-8",
-    ) as file:
-        writer = csv.DictWriter(
-            file,
-            fieldnames=fieldnames,
+        optimization_seconds = sum(
+            safe_float(step.get("training_time_sec")) or 0.0
+            for step in history
         )
+        total_minutes = (collection_seconds + optimization_seconds) / 60.0
+
+        rows.append({
+            "configuration": display_name(model_name),
+            "num_iterations": number_of_iterations,
+            "global_reward_mean": float(np.mean(rewards)),
+            "global_reward_std": float(np.std(rewards)),
+            "final_reward_mean_20": float(np.mean(final_rewards)),
+            "final_reward_std_20": float(np.std(final_rewards)),
+            "final_reward_min_20": float(np.min(final_rewards)),
+            "final_reward_max_20": float(np.max(final_rewards)),
+            "best_recorded_avg_reward": float(np.max(rewards)),
+            "worst_recorded_avg_reward": float(np.min(rewards)),
+            "total_collection_minutes": collection_seconds / 60.0,
+            "total_optimization_minutes": optimization_seconds / 60.0,
+            "total_minutes": total_minutes,
+            "average_minutes_per_iteration": total_minutes / number_of_iterations,
+        })
+
+    rows.sort(key=lambda row: row["final_reward_mean_20"], reverse=True)
+    with save_path.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 
@@ -1192,7 +1203,7 @@ def export_training_summary_csv(
 def export_agent_loss_summary_csv(
     logs: dict[str, list[dict[str, Any]]],
     save_path: str | Path,
-    last_n_iterations: int = 50,
+    last_n_iterations: int = 20,
     num_agents: int = NUM_AGENTS,
 ) -> None:
     """Exporte les pertes finales moyennes de chaque agent."""
@@ -1271,83 +1282,58 @@ def export_agent_loss_summary_csv(
 
 def print_training_summary(
     logs: dict[str, list[dict[str, Any]]],
-    last_n_iterations: int = 50,
+    last_n_iterations: int = 20,
 ) -> None:
-    """Affiche le classement final selon la récompense partagée."""
+    """Affiche le classement final sur les 20 dernières itérations."""
 
     print("\n" + "=" * 78)
     print("RÉSUMÉ DES PERFORMANCES D'ENTRAÎNEMENT")
     print("=" * 78)
-
     results: list[dict[str, Any]] = []
 
     for model_name, history in logs.items():
         _, rewards = extract_metric(history, "avg_reward")
-
         if rewards.size == 0:
             continue
 
         count = min(last_n_iterations, rewards.size)
         final_rewards = rewards[-count:]
-
-        total_seconds = 0.0
-
-        for step in history:
-            total_seconds += (
-                safe_float(step.get("collection_time_sec"))
-                or 0.0
-            )
-            total_seconds += (
-                safe_float(step.get("training_time_sec"))
-                or 0.0
-            )
-
-        results.append(
-            {
-                "name": display_name(model_name),
-                "iterations": int(rewards.size),
-                "final_mean": float(np.mean(final_rewards)),
-                "final_std": float(np.std(final_rewards)),
-                "best": float(np.max(rewards)),
-                "worst": float(np.min(rewards)),
-                "total_minutes": total_seconds / 60.0,
-            }
+        total_seconds = sum(
+            (safe_float(step.get("collection_time_sec")) or 0.0)
+            + (safe_float(step.get("training_time_sec")) or 0.0)
+            for step in history
         )
+        total_minutes = total_seconds / 60.0
+        results.append({
+            "name": display_name(model_name),
+            "iterations": int(rewards.size),
+            "final_mean": float(np.mean(final_rewards)),
+            "final_std": float(np.std(final_rewards)),
+            "final_min": float(np.min(final_rewards)),
+            "final_max": float(np.max(final_rewards)),
+            "best": float(np.max(rewards)),
+            "worst": float(np.min(rewards)),
+            "total_minutes": total_minutes,
+            "average_minutes_per_iteration": total_minutes / rewards.size,
+        })
 
-    results.sort(
-        key=lambda item: item["final_mean"],
-        reverse=True,
-    )
-
+    results.sort(key=lambda item: item["final_mean"], reverse=True)
     for rank, result in enumerate(results, start=1):
         print(f"\n{rank}. {result['name']}")
+        print(f"   Itérations                         : {result['iterations']}")
+        print(f"   Moyenne des 20 dernières           : {result['final_mean']:.4f}")
+        print(f"   Écart-type des 20 dernières        : {result['final_std']:.4f}")
+        print(f"   Minimum des 20 dernières           : {result['final_min']:.4f}")
+        print(f"   Maximum des 20 dernières           : {result['final_max']:.4f}")
+        print(f"   Meilleure moyenne observée         : {result['best']:.4f}")
+        print(f"   Pire moyenne observée              : {result['worst']:.4f}")
+        print(f"   Temps cumulé total (min)           : {result['total_minutes']:.2f}")
         print(
-            f"   Itérations                  : "
-            f"{result['iterations']}"
-        )
-        print(
-            f"   Moyenne finale partagée     : "
-            f"{result['final_mean']:.4f}"
-        )
-        print(
-            f"   Écart-type final temporel   : "
-            f"{result['final_std']:.4f}"
-        )
-        print(
-            f"   Meilleure moyenne observée  : "
-            f"{result['best']:.4f}"
-        )
-        print(
-            f"   Pire moyenne observée       : "
-            f"{result['worst']:.4f}"
-        )
-        print(
-            f"   Temps cumulé total (min)    : "
-            f"{result['total_minutes']:.2f}"
+            f"   Temps moyen par itération (min)    : "
+            f"{result['average_minutes_per_iteration']:.2f}"
         )
 
     print("\n" + "=" * 78)
-
 
 
 # ============================================================
@@ -1570,7 +1556,7 @@ def plot_grouped_pairwise_reward_comparisons(
     )
 
     figure.suptitle(
-        "Comparaisons contrôlées des récompenses d'entraînement",
+        "Comparaisons par paires des récompenses d'entraînement",
         fontsize=17,
     )
     figure.tight_layout(rect=[0, 0, 1, 0.96])
@@ -1589,60 +1575,39 @@ def plot_grouped_loss_type(
     window_size: int = 10,
     num_agents: int = NUM_AGENTS,
 ) -> None:
-    """
-    Regroupe un même type de perte dans une figure 2 x 2.
+    """Trace les pertes; MAPPO n'affiche qu'un critique centralisé."""
 
-    Chaque sous-figure correspond à une configuration.
-    Les cinq courbes correspondent aux agents B0 à B4.
-    """
-
-    ordered_items = sorted(
-        logs.items(),
-        key=lambda item: display_name(item[0]),
-    )
-
-    figure, axes = plt.subplots(
-        2,
-        2,
-        figsize=(17, 12),
-        squeeze=False,
-    )
+    ordered_items = sorted(logs.items(), key=lambda item: display_name(item[0]))
+    figure, axes = plt.subplots(2, 2, figsize=(17, 12), squeeze=False)
     axes_flat = axes.flatten()
 
-    for axis, (model_name, history) in zip(
-        axes_flat,
-        ordered_items,
-    ):
+    for axis, (model_name, history) in zip(axes_flat, ordered_items):
+        is_mappo = model_name.lower().startswith("mappo")
+        agent_indices = [0] if is_mappo and loss_prefix == "critic_loss" else range(num_agents)
         plotted = 0
 
-        for agent_index in range(num_agents):
+        for agent_index in agent_indices:
             iterations, values = extract_metric(
-                history,
-                f"{loss_prefix}_agent_{agent_index}",
+                history, f"{loss_prefix}_agent_{agent_index}"
             )
-
             if values.size == 0:
                 continue
-
-            smooth_positions, smooth_values = moving_average(
-                values,
-                window_size=window_size,
+            smooth_positions, smooth_values = moving_average(values, window_size)
+            label = (
+                "Critique centralisé"
+                if is_mappo and loss_prefix == "critic_loss"
+                else f"B{agent_index}"
             )
-
             axis.plot(
                 iterations[smooth_positions],
                 smooth_values,
                 linewidth=1.8,
-                label=f"B{agent_index}",
+                label=label,
             )
             plotted += 1
 
         if plotted:
-            axis.legend(
-                ncol=3,
-                fontsize=8,
-            )
-
+            axis.legend(ncol=3, fontsize=8)
         axis.axhline(y=0, linestyle=":", linewidth=1)
         axis.set_title(display_name(model_name))
         axis.set_xlabel("Itération")
@@ -1652,12 +1617,8 @@ def plot_grouped_loss_type(
     for axis in axes_flat[len(ordered_items):]:
         axis.set_visible(False)
 
-    figure.suptitle(
-        f"{title_label} par agent et par configuration",
-        fontsize=17,
-    )
+    figure.suptitle(f"{title_label} par configuration", fontsize=17)
     figure.tight_layout(rect=[0, 0, 1, 0.96])
-
     save_path = ensure_parent_directory(save_path)
     figure.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close(figure)
@@ -1681,7 +1642,7 @@ def plot_grouped_agent_losses(
     plot_grouped_loss_type(
         logs,
         loss_prefix="actor_loss",
-        title_label="Actor loss",
+        title_label="Perte de l'acteur",
         save_path=(
             output_directory
             / "grouped_actor_loss_agents.png"
@@ -1692,7 +1653,7 @@ def plot_grouped_agent_losses(
     plot_grouped_loss_type(
         logs,
         loss_prefix="critic_loss",
-        title_label="Critic loss",
+        title_label="Perte du critique",
         save_path=(
             output_directory
             / "grouped_critic_loss_agents.png"
@@ -1703,7 +1664,7 @@ def plot_grouped_agent_losses(
     plot_grouped_loss_type(
         logs,
         loss_prefix="total_loss",
-        title_label="Total loss",
+        title_label="Perte totale",
         save_path=(
             output_directory
             / "grouped_total_loss_agents.png"
@@ -1721,7 +1682,7 @@ def generate_result_figures(
     output_directory: str | Path = "plot_results",
     reward_window_size: int = 10,
     loss_window_size: int = 10,
-    last_n_iterations: int = 50,
+    last_n_iterations: int = 20,
 ) -> None:
     """Génère toutes les figures et tous les tableaux utiles."""
 
@@ -1740,6 +1701,7 @@ def generate_result_figures(
     ]:
         directory.mkdir(parents=True, exist_ok=True)
 
+    validate_iteration_counts(logs, expected_iterations=75)
     validate_shared_rewards(logs)
     print_training_summary(
         logs,
@@ -1845,7 +1807,7 @@ def main() -> None:
         output_directory="plot_results",
         reward_window_size=10,
         loss_window_size=10,
-        last_n_iterations=50,
+        last_n_iterations=20,
     )
 
 
