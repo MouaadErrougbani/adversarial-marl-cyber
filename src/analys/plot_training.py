@@ -1745,12 +1745,12 @@ def generate_result_figures(
     )
 
     # Pertes
-    plot_average_loss_comparison(
-        logs,
-        losses_directory
-        / "average_loss_comparison.png",
-        window_size=loss_window_size,
-    )
+    # plot_average_loss_comparison(
+    #     logs,
+    #     losses_directory
+    #     / "average_loss_comparison.png",
+    #     window_size=loss_window_size,
+    # )
 
     plot_grouped_agent_losses(
         logs,
@@ -1758,11 +1758,11 @@ def generate_result_figures(
         window_size=loss_window_size,
     )
 
-    plot_final_agent_loss_bars(
-        logs,
-        losses_directory,
-        last_n_iterations=last_n_iterations,
-    )
+    # plot_final_agent_loss_bars(
+    #     logs,
+    #     losses_directory,
+    #     last_n_iterations=last_n_iterations,
+    # )
 
     # Temps
     plot_reward_vs_cumulative_time(
